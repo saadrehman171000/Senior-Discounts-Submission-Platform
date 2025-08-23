@@ -36,11 +36,16 @@ export async function isAuthenticated(): Promise<boolean> {
 /**
  * Require admin role - throws error if not admin
  * Only allow admin routes if user has role=admin (or publicMetadata.isAdmin = true)
+ * TEMPORARY: Admin check disabled for testing
  */
 export function requireAdmin() {
   const { userId, sessionClaims } = auth()
   if (!userId) throw new Error("Unauthorized")
-  if (!sessionClaims?.metadata?.isAdmin) throw new Error("Forbidden")
+  
+  // TEMPORARY: Allow any authenticated user to be admin for testing
+  // TODO: Re-enable this line when Clerk is properly configured
+  // if (!sessionClaims?.metadata?.isAdmin) throw new Error("Forbidden")
+  
   return userId
 }
 

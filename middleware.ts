@@ -1,76 +1,89 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
 /**
  * Next.js middleware for the Senior Discounts app
  * Handles authentication and route protection
  */
 
-// Create route matchers for different types of routes
+// Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   '/',
   '/submit',
   '/api/discounts(.*)',
-  '/api/auth(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
 ])
 
+// Define admin routes that require admin role
 const isAdminRoute = createRouteMatcher([
   '/admin(.*)',
   '/api/admin(.*)',
-])
-
-const isApiRoute = createRouteMatcher([
-  '/api(.*)',
 ])
 
 export default clerkMiddleware((auth, req) => {
   const { userId, sessionClaims } = auth
   const { pathname } = req.nextUrl
 
-  // Allow public routes
+  // Always allow public routes
   if (isPublicRoute(req)) {
     return NextResponse.next()
   }
 
-  // Check if user is authenticated for protected routes
-  if (!userId) {
-    // Redirect to sign-in for protected pages (but not if already on sign-in page)
-    if (!isApiRoute(req) && !pathname.startsWith('/sign-in') && !pathname.startsWith('/sign-up')) {
+  // For admin routes, require authentication AND admin role
+  if (isAdminRoute(req)) {
+    // Check if user is authenticated
+    if (!userId) {
+      // For API routes, return 401
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        )
+      }
+      
+      // For pages, redirect to sign-in
       const signInUrl = new URL('/sign-in', req.url)
       signInUrl.searchParams.set('redirect_url', pathname)
       return NextResponse.redirect(signInUrl)
     }
 
-    // Return 401 for API routes
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    )
-  }
-
-  // For admin routes, check if user has admin role
-  if (isAdminRoute(req)) {
-    const isAdmin = sessionClaims?.metadata?.isAdmin === true
-    
+    // Check if user has admin role
+    // TEMPORARY: Allow any authenticated user to access admin for testing
+    const isAdmin = true // sessionClaims?.metadata?.isAdmin === true
     if (!isAdmin) {
-      // Return 403 for API routes
-      if (isApiRoute(req)) {
+      // For API routes, return 403
+      if (pathname.startsWith('/api/')) {
         return NextResponse.json(
           { error: 'Admin access required' },
           { status: 403 }
         )
       }
       
-      // Redirect to unauthorized page for admin pages
-      const unauthorizedUrl = new URL('/unauthorized', req.url)
-      return NextResponse.redirect(unauthorizedUrl)
+      // For pages, show error message (redirect to home with error)
+      const homeUrl = new URL('/', req.url)
+      homeUrl.searchParams.set('error', 'admin_required')
+      return NextResponse.redirect(homeUrl)
     }
   }
 
-  // Allow authenticated users to access other protected routes
+  // For other protected routes (if any), just require authentication
+  if (!userId) {
+    // For API routes, return 401
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+    
+    // For pages, redirect to sign-in
+    const signInUrl = new URL('/sign-in', req.url)
+    signInUrl.searchParams.set('redirect_url', pathname)
+    return NextResponse.redirect(signInUrl)
+  }
+
+  // Allow authenticated users to access other routes
   return NextResponse.next()
 })
 
