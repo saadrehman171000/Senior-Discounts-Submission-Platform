@@ -112,13 +112,13 @@ export default function HomePage() {
         </section>
 
         {/* Search Section */}
-        <section id="search" className="py-12 bg-slate-50 dark:bg-slate-900">
+        <section id="search" className="py-12 bg-slate-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-4">
+              <h2 className="text-3xl font-bold text-slate-800 mb-4">
                 Find Senior Discounts
               </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">
+              <p className="text-lg text-slate-600">
                 Search by location, category, or age requirement
               </p>
             </div>
@@ -131,11 +131,11 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 id="results-heading" className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+                <h2 id="results-heading" className="text-2xl font-bold text-slate-800">
                   Available Discounts
                 </h2>
                 {totalCount > 0 && (
-                  <p className="text-slate-600 dark:text-slate-400 mt-1">
+                  <p className="text-slate-600 mt-1">
                     {totalCount} discount{totalCount !== 1 ? "s" : ""} found
                   </p>
                 )}
@@ -246,12 +246,12 @@ export default function HomePage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50">
+        <section className="py-16 bg-gradient-to-r from-amber-50 to-orange-50">
           <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-6">
+            <h2 className="text-3xl font-bold text-slate-800 mb-6">
               Have a Senior Discount to Share?
             </h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
+            <p className="text-lg text-slate-600 mb-8">
               Help other seniors save money by submitting your business discount. It only takes a few minutes!
             </p>
             <Button size="lg" asChild className="text-lg px-8 py-6 rounded-2xl">

@@ -62,6 +62,13 @@ export function OwnerSubmitForm() {
   } = form
   const watchedValues = watch()
 
+  // Debug form validation
+  useEffect(() => {
+    console.log('Form errors:', errors)
+    console.log('Form isValid:', isValid)
+    console.log('Form values:', watchedValues)
+  }, [errors, isValid, watchedValues])
+
   useEffect(() => {
     const savedDraft = sessionStorage.getItem(STORAGE_KEY)
     if (savedDraft) {
@@ -519,6 +526,18 @@ export function OwnerSubmitForm() {
           </div>
         )}
 
+        {/* Form Validation Debug */}
+        {Object.keys(errors).length > 0 && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h4 className="font-semibold text-red-800 mb-2">Form Validation Errors:</h4>
+            <ul className="text-sm text-red-700 space-y-1">
+              {Object.entries(errors).map(([field, error]) => (
+                <li key={field}>• {field}: {error?.message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
           <Button
@@ -533,7 +552,7 @@ export function OwnerSubmitForm() {
 
           <Button
             type="submit"
-            disabled={!isValid || isSubmitting || !isRecaptchaLoaded || isRecaptchaExecuting}
+            disabled={isSubmitting || !isRecaptchaLoaded || isRecaptchaExecuting}
             className="flex-1"
           >
             {isSubmitting ? (
