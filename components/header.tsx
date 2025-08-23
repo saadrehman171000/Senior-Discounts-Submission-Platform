@@ -12,23 +12,26 @@ export function Header() {
             <div className="flex items-center justify-center w-8 h-8 bg-amber-500 rounded-lg group-hover:bg-amber-600 transition-colors">
               <Percent className="h-4 w-4 text-white" />
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-amber-50">Senior Discounts</h1>
               <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Near You</p>
             </div>
+            <div className="sm:hidden">
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-amber-50">Senior Discounts</h1>
+            </div>
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Badge
               variant="secondary"
               className="hidden sm:inline-flex bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
             >
               Free to Submit
             </Badge>
-            <Button asChild variant="outline" size="sm" className="text-slate-600 hover:text-slate-800">
+            <Button asChild variant="outline" size="sm" className="text-slate-600 hover:text-slate-800 px-3 sm:px-4">
               <Link href="/login">Admin</Link>
             </Button>
-            <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6">
+            <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-3 sm:px-6 text-sm sm:text-base">
               <Link href="/submit">Submit a Discount</Link>
             </Button>
           </div>

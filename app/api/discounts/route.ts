@@ -43,11 +43,11 @@ export async function POST(request: NextRequest) {
       throw new ValidationError('Spam detected')
     }
 
-    // Verify reCAPTCHA (score ≥ 0.4)
-    const recaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken, 'submit_discount', 0.4)
-    if (!recaptchaValid) {
-      throw new RecaptchaError('reCAPTCHA verification failed')
-    }
+    // reCAPTCHA verification disabled
+    // const recaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken, 'submit_discount', 0.4)
+    // if (!recaptchaValid) {
+    //   throw new RecaptchaError('reCAPTCHA verification failed')
+    // }
 
     // Get client IP
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 

@@ -187,18 +187,18 @@ export default function HomePage() {
                           key={discount.id}
                           discount={{
                             id: discount.id,
-                            businessName: discount.businessName,
+                            businessName: discount.title,
                             category: discount.category,
                             zip: discount.zip,
-                            amount: discount.amount,
-                            days: discount.days,
-                            code: discount.code,
-                            validFrom: discount.startDate,
+                            amount: discount.sd?.amount || 'Discount available',
+                            days: discount.sd?.days,
+                            code: discount.sd?.code,
+                            validFrom: discount.sd?.start,
                             validUntil: discount.endDate,
-                            location: discount.location,
-                            website: discount.website,
-                            proof: discount.proof,
-                            phone: discount.phone,
+                            location: discount.sd?.location,
+                            website: discount.sd?.website,
+                            proof: discount.sd?.proof || '#',
+                            phone: discount.sd?.phone,
                             sponsored: discount.sponsored,
                           }}
                         />

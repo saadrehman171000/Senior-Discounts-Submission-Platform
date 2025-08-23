@@ -25,9 +25,16 @@ export async function POST(
       throw new ValidationError('Discount ID is required')
     }
 
-    // Parse request body
-    const body = await request.json()
-    const { sponsored } = ApproveDiscountSchema.parse({ id, ...body })
+    // Parse request body (optional)
+    let sponsored: boolean | undefined
+    try {
+      const body = await request.json()
+      const parsed = ApproveDiscountSchema.parse({ id, ...body })
+      sponsored = parsed.sponsored
+    } catch (parseError) {
+      // If no body or invalid body, use default values
+      sponsored = false
+    }
 
     // Check if discount exists
     const existingDiscount = await prisma.seniorDiscount.findUnique({

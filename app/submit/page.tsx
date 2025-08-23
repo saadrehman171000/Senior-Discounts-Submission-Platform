@@ -14,17 +14,21 @@ export default function SubmitPage() {
           <div className="mb-8">
             <Link
               href="/"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+              className="inline-flex items-center text-sm text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors mb-6 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              <ArrowLeft className="h-4 w-4 mr-1" />
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to search
             </Link>
 
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">Submit a Senior Discount</h1>
-            <p className="text-slate-700 dark:text-slate-300 leading-7 max-w-2xl">
-              Help seniors in your community save money by listing your business discount. All submissions are reviewed
-              before being published.
-            </p>
+            <div className="text-center mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-black">
+                Submit a Senior Discount
+              </h1>
+              <p className="text-black leading-7 max-w-2xl mx-auto font-bold text-lg">
+                Help seniors in your community save money by listing your business discount. All submissions are reviewed
+                before being published.
+              </p>
+            </div>
           </div>
 
           <OwnerSubmitForm />

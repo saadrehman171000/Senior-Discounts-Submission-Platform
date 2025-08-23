@@ -61,20 +61,13 @@ export function OwnerSubmitForm() {
   } = form
   const watchedValues = watch()
 
-  // Debug form validation
-  useEffect(() => {
-    console.log('Form errors:', errors)
-    console.log('Form isValid:', isValid)
-    console.log('Form values:', watchedValues)
-    console.log('Form state:', form.getValues())
-  }, [errors, isValid, watchedValues, form])
+
 
   useEffect(() => {
     const savedDraft = sessionStorage.getItem(STORAGE_KEY)
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft)
-        console.log('Restoring draft:', draft)
         Object.keys(draft).forEach((key) => {
           setValue(key as keyof OwnerSubmitData, draft[key])
         })
@@ -83,7 +76,6 @@ export function OwnerSubmitForm() {
       }
     }
     setIsInitialized(true)
-    console.log('Form initialized with values:', form.getValues())
   }, [setValue, form])
 
   const saveDraft = useCallback((values: OwnerSubmitData) => {
@@ -111,9 +103,6 @@ export function OwnerSubmitForm() {
   }, [])
 
   const onSubmit = async (data: OwnerSubmitData) => {
-    console.log('Form submission data:', data)
-    console.log('Form errors before submission:', errors)
-    
     setIsSubmitting(true)
 
     try {
@@ -207,9 +196,9 @@ export function OwnerSubmitForm() {
     <div className="space-y-8">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Discount Details */}
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold tracking-tight">Discount Details</CardTitle>
+        <Card className="rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-t-2xl">
+            <CardTitle className="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-200">Discount Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Business Name */}
@@ -356,9 +345,9 @@ export function OwnerSubmitForm() {
         </Card>
 
         {/* Additional Details */}
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold tracking-tight">Additional Details</CardTitle>
+        <Card className="rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-t-2xl">
+            <CardTitle className="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-200">Additional Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Days and Code */}
@@ -476,9 +465,9 @@ export function OwnerSubmitForm() {
         </Card>
 
         {/* Terms and Conditions */}
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold tracking-tight">Terms & Conditions</CardTitle>
+        <Card className="rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-slate-800 dark:to-slate-700 rounded-t-2xl">
+            <CardTitle className="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-200">Terms & Conditions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start space-x-3">
@@ -519,36 +508,7 @@ export function OwnerSubmitForm() {
 
 
 
-        {/* Form Validation Debug */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2">Form Debug Info:</h4>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p>Business: "{watchedValues.business}" (Length: {watchedValues.business?.length || 0})</p>
-            <p>Amount: "{watchedValues.amount}" (Length: {watchedValues.amount?.length || 0})</p>
-            <p>ZIP: "{watchedValues.zip}" (Length: {watchedValues.zip?.length || 0})</p>
-            <p>Proof: "{watchedValues.proof}" (Length: {watchedValues.proof?.length || 0})</p>
-            <p>Category: "{watchedValues.category}"</p>
-            <p>Min Age: "{watchedValues.minAge}"</p>
-            <p>Scope: "{watchedValues.scope}"</p>
-            <p>Owner Confirm: {watchedValues.ownerConfirm ? 'Yes' : 'No'}</p>
-            <p>Terms: {watchedValues.tos ? 'Yes' : 'No'}</p>
-          </div>
-          <div className="mt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={async () => {
-                const result = await form.trigger()
-                console.log('Manual validation result:', result)
-                console.log('Current errors:', errors)
-                console.log('Form values:', form.getValues())
-              }}
-            >
-              Debug: Trigger Validation
-            </Button>
-          </div>
-        </div>
+
 
         {Object.keys(errors).length > 0 && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -562,14 +522,14 @@ export function OwnerSubmitForm() {
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 pt-6">
           <Button
             type="button"
             variant="outline"
             onClick={() => setShowPreview(!showPreview)}
-            className="flex-1"
+            className="flex-1 h-12 text-base font-medium border-2 hover:border-slate-300 dark:hover:border-slate-600"
           >
-            <Eye className="w-4 h-4 mr-2" />
+            <Eye className="w-5 h-5 mr-2" />
             {showPreview ? "Hide Preview" : "Preview Discount"}
           </Button>
 
@@ -582,7 +542,7 @@ export function OwnerSubmitForm() {
               const result = await form.trigger()
               console.log('Validation result:', result)
             }}
-            className="flex-1"
+            className="flex-1 h-12 text-base font-medium border-2 hover:border-slate-300 dark:hover:border-slate-600"
           >
             Test Validation
           </Button>
@@ -590,16 +550,16 @@ export function OwnerSubmitForm() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1"
+            className="flex-1 h-12 text-base font-medium bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 Submitting...
               </>
             ) : (
               <>
-                <Check className="w-4 h-4 mr-2" />
+                <Check className="w-5 h-5 mr-2" />
                 Submit Discount
               </>
             )}
@@ -609,9 +569,14 @@ export function OwnerSubmitForm() {
 
       {/* Preview Section */}
       {showPreview && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Preview</h3>
-          <DiscountCard discount={previewDiscount} />
+        <div className="space-y-6 pt-8 border-t border-slate-200 dark:border-slate-700">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Preview Your Discount</h3>
+            <p className="text-slate-600 dark:text-slate-400">This is how your discount will appear to users</p>
+          </div>
+          <div className="max-w-md mx-auto">
+            <DiscountCard discount={previewDiscount} />
+          </div>
         </div>
       )}
     </div>

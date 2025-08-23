@@ -50,6 +50,8 @@ export default function AdminPage() {
     fetcher,
   )
 
+
+
   const handleApprove = async (id: string) => {
     try {
       const response = await fetch(`/api/admin/discounts/${id}/approve`, {
@@ -121,7 +123,7 @@ export default function AdminPage() {
     }
   }
 
-  const discounts = data?.discounts || []
+  const discounts = data?.items || []
   const totalPages = data?.totalPages || 1
 
   const formatDate = (dateString: string) => {
@@ -227,7 +229,7 @@ export default function AdminPage() {
                         }}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{discount.businessName}</TableCell>
+                    <TableCell className="font-medium">{discount.title}</TableCell>
                     <TableCell>{discount.zip}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
@@ -235,7 +237,7 @@ export default function AdminPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{discount.minAge}+</TableCell>
-                    <TableCell>{discount.validUntil ? formatDate(discount.validUntil) : "No end date"}</TableCell>
+                    <TableCell>{discount.endDate ? formatDate(discount.endDate) : "No end date"}</TableCell>
                     <TableCell>
                       {discount.sponsored ? (
                         <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
@@ -259,7 +261,22 @@ export default function AdminPage() {
                               <DialogTitle>Discount Details</DialogTitle>
                             </DialogHeader>
                             <div className="mt-4">
-                              <DiscountCard discount={discount} />
+                              <DiscountCard discount={{
+                                id: discount.id,
+                                businessName: discount.title,
+                                category: discount.category,
+                                zip: discount.zip,
+                                amount: discount.sd?.amount || 'N/A',
+                                days: discount.sd?.days,
+                                code: discount.sd?.code,
+                                validFrom: discount.sd?.start,
+                                validUntil: discount.endDate,
+                                location: discount.sd?.location,
+                                website: discount.sd?.website,
+                                proof: discount.sd?.proof,
+                                phone: discount.sd?.phone,
+                                sponsored: discount.sponsored,
+                              }} />
                             </div>
                           </DialogContent>
                         </Dialog>
