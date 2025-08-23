@@ -13,6 +13,8 @@ const isPublicRoute = createRouteMatcher([
   '/submit',
   '/api/discounts(.*)',
   '/api/auth(.*)',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
 ])
 
 const isAdminRoute = createRouteMatcher([
@@ -35,8 +37,8 @@ export default clerkMiddleware((auth, req) => {
 
   // Check if user is authenticated for protected routes
   if (!userId) {
-    // Redirect to sign-in for protected pages
-    if (!isApiRoute(req)) {
+    // Redirect to sign-in for protected pages (but not if already on sign-in page)
+    if (!isApiRoute(req) && !pathname.startsWith('/sign-in') && !pathname.startsWith('/sign-up')) {
       const signInUrl = new URL('/sign-in', req.url)
       signInUrl.searchParams.set('redirect_url', pathname)
       return NextResponse.redirect(signInUrl)
