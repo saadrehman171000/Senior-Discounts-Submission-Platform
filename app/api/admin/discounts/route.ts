@@ -4,6 +4,10 @@ import { requireAdmin } from '@/lib/auth'
 import { AdminDiscountQuerySchema } from '@/lib/schemas'
 import { handleError, ValidationError } from '@/lib/errors'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 /**
  * GET /api/admin/discounts - List all discounts for admin
  */

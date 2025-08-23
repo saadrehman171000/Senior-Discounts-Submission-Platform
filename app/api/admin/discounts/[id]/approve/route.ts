@@ -5,6 +5,10 @@ import { ApproveDiscountSchema } from '@/lib/schemas'
 import { bustListCache } from '@/lib/cache'
 import { handleError, NotFoundError, ValidationError } from '@/lib/errors'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 /**
  * POST /api/admin/discounts/[id]/approve - Approve a discount
  */

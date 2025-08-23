@@ -8,6 +8,9 @@ import { cacheList, bustListCache } from '@/lib/cache'
 import { handleError, ValidationError, RecaptchaError, ConflictError } from '@/lib/errors'
 import { validateContentType, validatePayloadSize, sanitizeDiscountData } from '@/lib/security'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+
 /**
  * POST /api/discounts - Submit new discount
  */
