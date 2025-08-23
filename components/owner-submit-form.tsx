@@ -586,27 +586,55 @@ export function OwnerSubmitForm() {
               type="button" 
               variant="outline" 
               size="sm"
-              onClick={async () => {
-                console.log('reCAPTCHA status check:')
-                console.log('- window.grecaptcha:', !!window.grecaptcha)
-                console.log('- isLoaded:', isRecaptchaLoaded)
-                console.log('- isExecuting:', isRecaptchaExecuting)
+              onClick={() => {
+                console.log('Button clicked! Starting reCAPTCHA test...')
+                
+                // Basic check first
+                console.log('Basic checks:')
+                console.log('- Button click registered')
+                console.log('- window.grecaptcha exists:', !!window.grecaptcha)
+                console.log('- isRecaptchaLoaded:', isRecaptchaLoaded)
+                console.log('- isRecaptchaExecuting:', isRecaptchaExecuting)
                 console.log('- Site key:', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY)
                 
+                // Check if executeRecaptcha function exists
+                console.log('- executeRecaptcha function exists:', typeof executeRecaptcha === 'function')
+                
                 if (window.grecaptcha) {
+                  console.log('reCAPTCHA object details:')
                   console.log('- grecaptcha.ready exists:', !!window.grecaptcha.ready)
                   console.log('- grecaptcha.execute exists:', !!window.grecaptcha.execute)
+                  console.log('- grecaptcha object:', window.grecaptcha)
                 }
                 
-                try {
-                  const token = await executeRecaptcha('test_action')
-                  console.log('reCAPTCHA test successful, token:', token ? 'Received' : 'None')
-                } catch (error) {
-                  console.error('reCAPTCHA test failed:', error)
+                // Try to call executeRecaptcha
+                if (typeof executeRecaptcha === 'function') {
+                  console.log('Calling executeRecaptcha...')
+                  executeRecaptcha('test_action')
+                    .then(token => {
+                      console.log('reCAPTCHA test successful, token:', token ? 'Received' : 'None')
+                    })
+                    .catch(error => {
+                      console.error('reCAPTCHA test failed:', error)
+                    })
+                } else {
+                  console.error('executeRecaptcha function is not available!')
                 }
               }}
             >
               Debug: Test reCAPTCHA
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                console.log('Simple test button clicked!')
+                alert('Button is working!')
+              }}
+            >
+              Simple Test Button
             </Button>
           </div>
         </div>
