@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 
 :root {
+  /* Font variables */
+  --font-sans: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  
   /* Updated to warm, light amber/cream color palette for inviting design */
   --background: oklch(0.98 0.02 85); /* Warm cream background */
   --foreground: oklch(0.2 0.03 240); /* Dark slate text */

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdminFromRequest } from '@/lib/auth'
 import { AdminDiscountQuerySchema } from '@/lib/schemas'
 import { handleError, ValidationError } from '@/lib/errors'
 
@@ -13,8 +13,7 @@ export const runtime = 'nodejs'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Require requireAdmin()
-    const adminUserId = requireAdmin()
+    requireAdminFromRequest(request) // Require admin authentication
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)

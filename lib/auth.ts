@@ -1,122 +1,108 @@
-import { auth } from '@clerk/nextjs/server'
-import type { NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
+import { NextRequest } from 'next/server'
 
 /**
- * Clerk authentication and authorization utilities
+ * Simple custom authentication system
+ * Only allows saadrehman17100@gmail.com to access admin routes
  */
 
+const ADMIN_EMAIL = "saadrehman17100@gmail.com"
+
 /**
- * Get the current authenticated user
+ * Check if user is authenticated as admin (for Server Components)
  */
-export async function getCurrentUser() {
+export function isAdmin(): boolean {
   try {
-    const { userId } = await auth()
-    if (!userId) return null
+    const cookieStore = cookies()
+    const authToken = cookieStore.get('admin_auth')?.value
     
-    return { userId }
+    if (!authToken) return false
+    
+    // Simple token validation (in production, use proper JWT)
+    const decoded = Buffer.from(authToken, 'base64').toString('utf-8')
+    const { email, timestamp } = JSON.parse(decoded)
+    
+    // Check if token is expired (24 hours)
+    const tokenAge = Date.now() - timestamp
+    if (tokenAge > 24 * 60 * 60 * 1000) return false
+    
+    return email === ADMIN_EMAIL
   } catch (error) {
-    console.error('Error getting current user:', error)
-    return null
-  }
-}
-
-/**
- * Check if user is authenticated
- */
-export async function isAuthenticated(): Promise<boolean> {
-  try {
-    const { userId } = await auth()
-    return !!userId
-  } catch (error) {
-    console.error('Error checking authentication:', error)
+    console.error('Error checking admin access:', error)
     return false
   }
 }
 
 /**
- * Require admin role - throws error if not admin
- * Only allow admin routes if user has role=admin (or publicMetadata.isAdmin = true)
- * TEMPORARY: Admin check disabled for testing
+ * Check if user is authenticated as admin (for API routes)
  */
-export function requireAdmin() {
-  const { userId, sessionClaims } = auth()
-  if (!userId) throw new Error("Unauthorized")
-  
-  // TEMPORARY: Allow any authenticated user to be admin for testing
-  // TODO: Re-enable this line when Clerk is properly configured
-  // if (!sessionClaims?.metadata?.isAdmin) throw new Error("Forbidden")
-  
-  return userId
-}
-
-/**
- * Check if user has admin role
- */
-export async function isAdmin(): Promise<boolean> {
+export function isAdminFromRequest(request: NextRequest): boolean {
   try {
-    const { userId, sessionClaims } = await auth()
-    if (!userId) return false
+    const authToken = request.cookies.get('admin_auth')?.value
     
-    return !!sessionClaims?.metadata?.isAdmin
+    if (!authToken) return false
+    
+    // Simple token validation (in production, use proper JWT)
+    const decoded = Buffer.from(authToken, 'base64').toString('utf-8')
+    const { email, timestamp } = JSON.parse(decoded)
+    
+    // Check if token is expired (24 hours)
+    const tokenAge = Date.now() - timestamp
+    if (tokenAge > 24 * 60 * 60 * 1000) return false
+    
+    return email === ADMIN_EMAIL
   } catch (error) {
-    console.error('Error checking admin role:', error)
+    console.error('Error checking admin access:', error)
     return false
   }
 }
 
 /**
- * Require authentication - throws error if not authenticated
+ * Require admin access - throws error if not admin (for Server Components)
  */
-export function requireAuth() {
-  const { userId } = auth()
-  if (!userId) {
-    throw new Error('Authentication required')
+export function requireAdmin(): void {
+  if (!isAdmin()) {
+    throw new Error("Admin access required")
   }
-  return userId
 }
 
 /**
- * Get user's public profile information
+ * Require admin access - throws error if not admin (for API routes)
  */
-export async function getUserProfile() {
-  try {
-    const { userId, sessionClaims } = await auth()
-    if (!userId) return null
-    
+export function requireAdminFromRequest(request: NextRequest): void {
+  if (!isAdminFromRequest(request)) {
+    throw new Error("Admin access required")
+  }
+}
+
+/**
+ * Create admin authentication token
+ */
+export function createAdminToken(email: string): string {
+  const tokenData = {
+    email,
+    timestamp: Date.now()
+  }
+  return Buffer.from(JSON.stringify(tokenData)).toString('base64')
+}
+
+/**
+ * Verify admin login credentials
+ */
+export function verifyAdminLogin(email: string, password: string): boolean {
+  // Simple check - in production, use proper password hashing
+  return email === ADMIN_EMAIL && password === "admin123"
+}
+
+/**
+ * Get current authenticated user info
+ */
+export function getCurrentUser() {
+  if (isAdmin()) {
     return {
-      id: userId,
-      metadata: sessionClaims?.metadata || {},
-      isAdmin: !!sessionClaims?.metadata?.isAdmin,
-    }
-  } catch (error) {
-    console.error('Error getting user profile:', error)
-    return null
-  }
-}
-
-/**
- * Clerk configuration constants
- */
-export const CLERK_CONFIG = {
-  ADMIN_ROLE: 'admin',
-  ADMIN_METADATA_KEY: 'isAdmin',
-} as const
-
-/**
- * Middleware helper for protecting routes
- */
-export function createProtectedRoute(requireAdminRole: boolean = false) {
-  return async function protectedRoute(request: NextRequest) {
-    try {
-      if (requireAdminRole) {
-        await requireAdmin()
-      } else {
-        await requireAuth()
-      }
-      return true
-    } catch (error) {
-      console.error('Route protection failed:', error)
-      return false
+      email: ADMIN_EMAIL,
+      isAdmin: true
     }
   }
+  return null
 }

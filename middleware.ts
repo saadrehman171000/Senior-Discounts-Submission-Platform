@@ -1,91 +1,109 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 /**
- * Next.js middleware for the Senior Discounts app
- * Handles authentication and route protection
+ * Simple custom middleware for authentication
  */
 
 // Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/submit',
-  '/api/discounts(.*)',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-])
+const isPublicRoute = (pathname: string) => {
+  // Exact match for root path
+  if (pathname === '/') return true
+  
+  const basicPublicRoutes = [
+    '/submit',
+    '/login',
+    '/api/auth/login',
+    '/api/auth/logout',
+  ]
+  
+  const isBasicPublic = basicPublicRoutes.some(route => pathname.startsWith(route))
+  const isDiscountsButNotAdmin = pathname.startsWith('/api/discounts') && !pathname.startsWith('/api/admin')
+  
+  const result = isBasicPublic || isDiscountsButNotAdmin
+  
+  console.log(`🔍 Route check for ${pathname}:`)
+  console.log(`  - Basic public: ${isBasicPublic}`)
+  console.log(`  - Discounts but not admin: ${isDiscountsButNotAdmin}`)
+  console.log(`  - Final result: ${result}`)
+  
+  return result
+}
 
-// Define admin routes that require admin role
-const isAdminRoute = createRouteMatcher([
-  '/admin(.*)',
-  '/api/admin(.*)',
-])
+// Define admin routes that require authentication
+const isAdminRoute = (pathname: string) => {
+  const result = pathname.startsWith('/admin') || pathname.startsWith('/api/admin')
+  console.log(`🔒 Admin route check for ${pathname}: ${result}`)
+  return result
+}
 
-export default clerkMiddleware((auth, req) => {
-  const { userId, sessionClaims } = auth
-  const { pathname } = req.nextUrl
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Debug logging
+  console.log(`🔍 Middleware: ${pathname}`)
 
   // Always allow public routes
-  if (isPublicRoute(req)) {
+  if (isPublicRoute(pathname)) {
+    console.log(`✅ Public route: ${pathname}`)
     return NextResponse.next()
   }
 
-  // For admin routes, require authentication AND admin role
-  if (isAdminRoute(req)) {
-    // Check if user is authenticated
-    if (!userId) {
-      // For API routes, return 401
-      if (pathname.startsWith('/api/')) {
-        return NextResponse.json(
-          { error: 'Authentication required' },
-          { status: 401 }
-        )
-      }
-      
-      // For pages, redirect to sign-in
-      const signInUrl = new URL('/sign-in', req.url)
-      signInUrl.searchParams.set('redirect_url', pathname)
-      return NextResponse.redirect(signInUrl)
-    }
-
-    // Check if user has admin role
-    // TEMPORARY: Allow any authenticated user to access admin for testing
-    const isAdmin = true // sessionClaims?.metadata?.isAdmin === true
-    if (!isAdmin) {
-      // For API routes, return 403
-      if (pathname.startsWith('/api/')) {
-        return NextResponse.json(
-          { error: 'Admin access required' },
-          { status: 403 }
-        )
-      }
-      
-      // For pages, show error message (redirect to home with error)
-      const homeUrl = new URL('/', req.url)
-      homeUrl.searchParams.set('error', 'admin_required')
-      return NextResponse.redirect(homeUrl)
-    }
-  }
-
-  // For other protected routes (if any), just require authentication
-  if (!userId) {
-    // For API routes, return 401
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
+  // For admin routes, check authentication
+  if (isAdminRoute(pathname)) {
+    console.log(`🔒 Admin route: ${pathname}`)
+    const authToken = request.cookies.get('admin_auth')?.value
     
-    // For pages, redirect to sign-in
-    const signInUrl = new URL('/sign-in', req.url)
-    signInUrl.searchParams.set('redirect_url', pathname)
-    return NextResponse.redirect(signInUrl)
+    console.log(`🍪 Auth token: ${authToken ? 'Present' : 'Missing'}`)
+    
+    if (!authToken) {
+      console.log(`❌ No auth token, redirecting to login`)
+      // Redirect to login page
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    try {
+      console.log(`🔍 Validating token...`)
+      // Validate token
+      const decoded = Buffer.from(authToken, 'base64').toString('utf-8')
+      const { email, timestamp } = JSON.parse(decoded)
+      
+      console.log(`📧 Email: ${email}, Timestamp: ${timestamp}`)
+      
+      // Check if token is expired (24 hours)
+      const tokenAge = Date.now() - timestamp
+      if (tokenAge > 24 * 60 * 60 * 1000) {
+        console.log(`⏰ Token expired, redirecting to login`)
+        // Token expired, redirect to login
+        const loginUrl = new URL('/login', request.url)
+        loginUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(loginUrl)
+      }
+
+      // Check if email is admin email
+      if (email !== 'saadrehman17100@gmail.com') {
+        console.log(`❌ Not admin email, redirecting to home`)
+        // Not admin, redirect to home
+        return NextResponse.redirect(new URL('/', request.url))
+      }
+
+      console.log(`✅ Admin access granted for ${pathname}`)
+      // User is authenticated and is admin - allow access
+      return NextResponse.next()
+    } catch (error) {
+      console.log(`❌ Token validation error:`, error)
+      // Invalid token, redirect to login
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
-  // Allow authenticated users to access other routes
+  // Allow access to other routes
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: [

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdminFromRequest } from '@/lib/auth'
 import { DenyDiscountSchema } from '@/lib/schemas'
 import { bustListCache } from '@/lib/cache'
 import { handleError, NotFoundError, ValidationError } from '@/lib/errors'
@@ -17,8 +17,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Require requireAdmin()
-    const adminUserId = requireAdmin()
+    requireAdminFromRequest(request) // Require admin authentication
 
     // Validate discount ID
     const { id } = params
@@ -47,7 +46,7 @@ export async function POST(
       ...currentData,
       denial_reason: reason,
       denied_at: new Date().toISOString(),
-      denied_by: adminUserId
+      denied_by: 'admin'
     }
 
     // Update the discount

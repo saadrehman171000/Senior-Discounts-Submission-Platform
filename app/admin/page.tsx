@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Eye, Check, X } from "lucide-react"
+import { Eye, Check, X, LogOut } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -33,6 +34,16 @@ export default function AdminPage() {
   const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([])
   const [denyReason, setDenyReason] = useState("")
   const { toast } = useToast()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   const { data, error, isLoading, mutate } = useSWR(
     `/api/admin/discounts?status=${statusFilter}&page=${currentPage}`,
@@ -159,13 +170,17 @@ export default function AdminPage() {
               </Select>
             </div>
 
-            {selectedDiscounts.length > 0 && (
-              <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {selectedDiscounts.length > 0 && (
                 <Button onClick={handleBulkApprove} className="rounded-lg">
                   Approve Selected ({selectedDiscounts.length})
                 </Button>
-              </div>
-            )}
+              )}
+              <Button onClick={handleLogout} variant="outline" size="sm">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
 
           {/* Table */}
