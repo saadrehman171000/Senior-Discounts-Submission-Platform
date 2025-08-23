@@ -44,8 +44,8 @@ export const OwnerSubmitSchema = z
     // Hidden honeypot field
     hp: z.string().max(0, "Spam detected").optional(),
     
-    // reCAPTCHA token (will be added by the form)
-    recaptchaToken: z.string().min(1, "reCAPTCHA verification required"),
+    // reCAPTCHA token (disabled - not required)
+    recaptchaToken: z.string().optional(),
   })
   .refine(
     (data) => {

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DiscountCard } from "@/components/discount-card"
 import { useToast } from "@/hooks/use-toast"
-import { useRecaptcha } from "@/hooks/use-recaptcha"
+
 import { OwnerSubmitSchema, type OwnerSubmitData, categories, ageOptions, scopeOptions } from "@/lib/validation"
 import { Eye, Check, Loader2 } from "lucide-react"
 
@@ -23,7 +23,6 @@ export function OwnerSubmitForm() {
   const [showPreview, setShowPreview] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const { toast } = useToast()
-  const { isLoaded: isRecaptchaLoaded, isExecuting: isRecaptchaExecuting, executeRecaptcha } = useRecaptcha()
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
 
   const form = useForm<OwnerSubmitData>({
@@ -47,7 +46,7 @@ export function OwnerSubmitForm() {
       end: "",
       notes: "",
       hp: "",
-      recaptchaToken: "",
+      recaptchaToken: "disabled",
     },
   })
 
@@ -115,36 +114,10 @@ export function OwnerSubmitForm() {
     console.log('Form submission data:', data)
     console.log('Form errors before submission:', errors)
     
-    // Manual validation check
-    const isValid = await form.trigger()
-    console.log('Manual validation result:', isValid)
-    
-    if (!isValid) {
-      console.log('Form validation failed:', errors)
-      toast({
-        title: "Validation Error",
-        description: "Please fix the form errors before submitting.",
-        variant: "destructive",
-      })
-      return
-    }
-    
-    if (!isRecaptchaLoaded) {
-      toast({
-        title: "Error",
-        description: "reCAPTCHA is still loading. Please wait a moment and try again.",
-        variant: "destructive",
-      })
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
-      // Execute reCAPTCHA
-      const recaptchaToken = await executeRecaptcha('submit_discount')
-      
-      // Submit to backend
+      // Submit to backend directly
       const response = await fetch("/api/discounts", {
         method: "POST",
         headers: {
@@ -152,7 +125,7 @@ export function OwnerSubmitForm() {
         },
         body: JSON.stringify({
           ...data,
-          recaptchaToken,
+          recaptchaToken: "disabled", // Set a dummy value since reCAPTCHA is disabled
         }),
       })
 
@@ -544,14 +517,7 @@ export function OwnerSubmitForm() {
           </CardContent>
         </Card>
 
-        {/* reCAPTCHA Status */}
-        {!isRecaptchaLoaded && (
-          <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800">
-              Loading reCAPTCHA protection... Please wait before submitting.
-            </p>
-          </div>
-        )}
+
 
         {/* Form Validation Debug */}
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -567,7 +533,7 @@ export function OwnerSubmitForm() {
             <p>Owner Confirm: {watchedValues.ownerConfirm ? 'Yes' : 'No'}</p>
             <p>Terms: {watchedValues.tos ? 'Yes' : 'No'}</p>
           </div>
-          <div className="mt-4 space-y-2">
+          <div className="mt-4">
             <Button 
               type="button" 
               variant="outline" 
@@ -580,61 +546,6 @@ export function OwnerSubmitForm() {
               }}
             >
               Debug: Trigger Validation
-            </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                console.log('Button clicked! Starting reCAPTCHA test...')
-                
-                // Basic check first
-                console.log('Basic checks:')
-                console.log('- Button click registered')
-                console.log('- window.grecaptcha exists:', !!window.grecaptcha)
-                console.log('- isRecaptchaLoaded:', isRecaptchaLoaded)
-                console.log('- isRecaptchaExecuting:', isRecaptchaExecuting)
-                console.log('- Site key:', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY)
-                
-                // Check if executeRecaptcha function exists
-                console.log('- executeRecaptcha function exists:', typeof executeRecaptcha === 'function')
-                
-                if (window.grecaptcha) {
-                  console.log('reCAPTCHA object details:')
-                  console.log('- grecaptcha.ready exists:', !!window.grecaptcha.ready)
-                  console.log('- grecaptcha.execute exists:', !!window.grecaptcha.execute)
-                  console.log('- grecaptcha object:', window.grecaptcha)
-                }
-                
-                // Try to call executeRecaptcha
-                if (typeof executeRecaptcha === 'function') {
-                  console.log('Calling executeRecaptcha...')
-                  executeRecaptcha('test_action')
-                    .then(token => {
-                      console.log('reCAPTCHA test successful, token:', token ? 'Received' : 'None')
-                    })
-                    .catch(error => {
-                      console.error('reCAPTCHA test failed:', error)
-                    })
-                } else {
-                  console.error('executeRecaptcha function is not available!')
-                }
-              }}
-            >
-              Debug: Test reCAPTCHA
-            </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                console.log('Simple test button clicked!')
-                alert('Button is working!')
-              }}
-            >
-              Simple Test Button
             </Button>
           </div>
         </div>
@@ -678,7 +589,7 @@ export function OwnerSubmitForm() {
 
           <Button
             type="submit"
-            disabled={isSubmitting || !isRecaptchaLoaded || isRecaptchaExecuting}
+            disabled={isSubmitting}
             className="flex-1"
           >
             {isSubmitting ? (
