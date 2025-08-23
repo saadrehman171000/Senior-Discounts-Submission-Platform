@@ -108,6 +108,11 @@ export default function HomePage() {
                 <a href="#search">Search Discounts</a>
               </Button>
             </div>
+            <div className="mt-6">
+              <Button size="sm" variant="ghost" asChild className="text-slate-600 hover:text-slate-800">
+                <a href="/login">Admin Sign In</a>
+              </Button>
+            </div>
           </div>
         </section>
 

@@ -25,6 +25,9 @@ export function Header() {
             >
               Free to Submit
             </Badge>
+            <Button asChild variant="outline" size="sm" className="text-slate-600 hover:text-slate-800">
+              <Link href="/login">Admin</Link>
+            </Button>
             <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6">
               <Link href="/submit">Submit a Discount</Link>
             </Button>
