@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DiscountStatus {
+  PENDING
+  PUBLISHED
+  TRASH
+}
+
+model SeniorDiscount {
+  id           String         @id @default(cuid())
+  status       DiscountStatus @default(PENDING)
+  title        String
+  sd           Json           // normalized payload
+
+  // Shadow columns
+  zip          String         @db.VarChar(5)
+  category     String
+  minAge       Int
+  endDate      DateTime?
+  sponsored    Boolean        @default(false)
+
+  // Duplicate guard (per day)
+  businessNorm String
+  amountNorm   String
+  createdDay   DateTime
+
+  createdIp    String?        @db.VarChar(45)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([status, zip, category, minAge, sponsored, endDate, createdAt])
+  @@unique([businessNorm, zip, amountNorm, createdDay])
+}
+
+// Audit log for admin actions
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  action    String   @db.VarChar(50) // APPROVE, DENY, DELETE
+  discountId String
+  clerkUserId String @db.VarChar(100)
+  details   Json?    // Additional action details
+  createdAt DateTime @default(now())
+  
+  @@index([clerkUserId])
+  @@index([discountId])
+  @@index([createdAt])
+}

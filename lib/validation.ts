@@ -43,6 +43,9 @@ export const OwnerSubmitSchema = z
 
     // Hidden honeypot field
     hp: z.string().max(0, "Spam detected").optional(),
+    
+    // reCAPTCHA token (will be added by the form)
+    recaptchaToken: z.string().min(1, "reCAPTCHA verification required"),
   })
   .refine(
     (data) => {
@@ -74,3 +77,35 @@ export const categories = [
 
 export const ageOptions = ["50", "55", "60", "62", "65"]
 export const scopeOptions = ["Nationwide", "Specific locations", "Online only"]
+
+// Backend response types
+export interface DiscountResponse {
+  id: string
+  businessName: string
+  category: string
+  amount: string
+  minAge: number
+  scope: string
+  zip: string
+  proof: string
+  days?: string
+  code?: string
+  location?: string
+  website?: string
+  phone?: string
+  startDate?: string
+  endDate?: string
+  notes?: string
+  sponsored: boolean
+  createdAt: string
+  description: string
+}
+
+export interface DiscountsListResponse {
+  items: DiscountResponse[]
+  page: number
+  total: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPrevPage: boolean
+}

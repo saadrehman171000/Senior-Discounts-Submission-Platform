@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DiscountCard } from "@/components/discount-card"
 import { useToast } from "@/hooks/use-toast"
+import { useRecaptcha } from "@/hooks/use-recaptcha"
 import { OwnerSubmitSchema, type OwnerSubmitData, categories, ageOptions, scopeOptions } from "@/lib/validation"
-import { Eye, Check } from "lucide-react"
+import { Eye, Check, Loader2 } from "lucide-react"
 
 const STORAGE_KEY = "senior-discounts-draft"
 
@@ -22,6 +23,7 @@ export function OwnerSubmitForm() {
   const [showPreview, setShowPreview] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const { toast } = useToast()
+  const { isLoaded: isRecaptchaLoaded, isExecuting: isRecaptchaExecuting, executeRecaptcha } = useRecaptcha()
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
 
   const form = useForm<OwnerSubmitData>({
@@ -45,6 +47,7 @@ export function OwnerSubmitForm() {
       end: "",
       notes: "",
       hp: "",
+      recaptchaToken: "",
     },
   })
 
@@ -55,6 +58,7 @@ export function OwnerSubmitForm() {
     watch,
     setValue,
     reset,
+    setError,
   } = form
   const watchedValues = watch()
 
@@ -98,9 +102,22 @@ export function OwnerSubmitForm() {
   }, [])
 
   const onSubmit = async (data: OwnerSubmitData) => {
+    if (!isRecaptchaLoaded) {
+      toast({
+        title: "Error",
+        description: "reCAPTCHA is still loading. Please wait a moment and try again.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
+      // Execute reCAPTCHA
+      const recaptchaToken = await executeRecaptcha('submit_discount')
+      
+      // Submit to backend
       const response = await fetch("/api/discounts", {
         method: "POST",
         headers: {
@@ -108,17 +125,31 @@ export function OwnerSubmitForm() {
         },
         body: JSON.stringify({
           ...data,
-          recaptchaToken: "dummy-token", // In real app, get from reCAPTCHA
+          recaptchaToken,
         }),
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        throw new Error("Failed to submit discount")
+        // Handle specific error types
+        if (response.status === 409) {
+          throw new Error(result.error?.message || "A similar discount has already been submitted today")
+        }
+        
+        if (response.status === 400) {
+          if (result.error?.code === 'RECAPTCHA_ERROR') {
+            throw new Error("reCAPTCHA verification failed. Please try again.")
+          }
+          throw new Error(result.error?.message || "Invalid data submitted")
+        }
+        
+        throw new Error(result.error?.message || "Failed to submit discount")
       }
 
       toast({
         title: "Success!",
-        description: "Your discount has been submitted for review.",
+        description: "Your discount has been submitted for review. You'll receive an email confirmation shortly.",
       })
 
       // Clear draft and reset form
@@ -126,9 +157,11 @@ export function OwnerSubmitForm() {
       reset()
       setShowPreview(false)
     } catch (error) {
+      console.error("Submission error:", error)
+      
       toast({
         title: "Error",
-        description: "Failed to submit discount. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit discount. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -178,242 +211,339 @@ export function OwnerSubmitForm() {
           <CardHeader>
             <CardTitle className="text-xl font-semibold tracking-tight">Discount Details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* Business Name */}
+            <div className="space-y-2">
+              <Label htmlFor="business">Business Name *</Label>
+              <Input
+                id="business"
+                placeholder="Enter your business name"
+                {...register("business")}
+                className={errors.business ? "border-red-500" : ""}
+              />
+              {errors.business && (
+                <p className="text-sm text-red-500">{errors.business.message}</p>
+              )}
+            </div>
+
+            {/* Category and Amount */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="business">Business Name *</Label>
-                <Input
-                  id="business"
-                  {...register("business")}
-                  className="rounded-lg"
-                  placeholder="Your Business Name"
-                />
-                {errors.business && <p className="text-sm text-destructive">{errors.business.message}</p>}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
-                <Select onValueChange={(value) => setValue("category", value)}>
-                  <SelectTrigger id="category" className="rounded-lg">
+                <Select
+                  value={watchedValues.category}
+                  onValueChange={(value) => setValue("category", value)}
+                >
+                  <SelectTrigger className={errors.category ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+                {errors.category && (
+                  <p className="text-sm text-red-500">{errors.category.message}</p>
+                )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="amount">Discount Amount *</Label>
                 <Input
                   id="amount"
+                  placeholder="e.g., 20% off, $5 discount"
                   {...register("amount")}
-                  className="rounded-lg"
-                  placeholder="e.g., 10% off, $5 off, Buy one get one free"
+                  className={errors.amount ? "border-red-500" : ""}
                 />
-                <p className="text-sm text-muted-foreground">Describe the discount clearly</p>
-                {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
+                {errors.amount && (
+                  <p className="text-sm text-red-500">{errors.amount.message}</p>
+                )}
               </div>
+            </div>
 
+            {/* Age and Scope */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="minAge">Minimum Age *</Label>
-                <Select onValueChange={(value) => setValue("minAge", value as any)}>
-                  <SelectTrigger id="minAge" className="rounded-lg">
+                <Select
+                  value={watchedValues.minAge}
+                  onValueChange={(value) => setValue("minAge", value)}
+                >
+                  <SelectTrigger className={errors.minAge ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select minimum age" />
                   </SelectTrigger>
                   <SelectContent>
                     {ageOptions.map((age) => (
                       <SelectItem key={age} value={age}>
-                        {age}+
+                        {age}+ years
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.minAge && <p className="text-sm text-destructive">{errors.minAge.message}</p>}
+                {errors.minAge && (
+                  <p className="text-sm text-red-500">{errors.minAge.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="scope">Scope *</Label>
+                <Select
+                  value={watchedValues.scope}
+                  onValueChange={(value) => setValue("scope", value)}
+                >
+                  <SelectTrigger className={errors.scope ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select scope" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scopeOptions.map((scope) => (
+                      <SelectItem key={scope} value={scope}>
+                        {scope}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.scope && (
+                  <p className="text-sm text-red-500">{errors.scope.message}</p>
+                )}
               </div>
             </div>
 
+            {/* ZIP Code and Proof */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="zip">ZIP Code *</Label>
+                <Input
+                  id="zip"
+                  placeholder="Enter 5-digit ZIP code"
+                  {...register("zip")}
+                  className={errors.zip ? "border-red-500" : ""}
+                />
+                {errors.zip && (
+                  <p className="text-sm text-red-500">{errors.zip.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="proof">Proof URL *</Label>
+                <Input
+                  id="proof"
+                  placeholder="https://example.com/discount-proof"
+                  {...register("proof")}
+                  className={errors.proof ? "border-red-500" : ""}
+                />
+                {errors.proof && (
+                  <p className="text-sm text-red-500">{errors.proof.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Hidden honeypot field */}
+            <input
+              type="text"
+              {...register("hp")}
+              style={{ display: "none" }}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </CardContent>
+        </Card>
+
+        {/* Additional Details */}
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold tracking-tight">Additional Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Days and Code */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="days">Valid Days</Label>
                 <Input
                   id="days"
+                  placeholder="e.g., Monday-Friday, Weekends only"
                   {...register("days")}
-                  className="rounded-lg"
-                  placeholder="e.g., Weekdays only, Tuesdays"
                 />
-                <p className="text-sm text-muted-foreground">When is this discount valid?</p>
+                {errors.days && (
+                  <p className="text-sm text-red-500">{errors.days.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="code">Promo Code</Label>
-                <Input id="code" {...register("code")} className="rounded-lg" placeholder="e.g., SENIOR10" />
-                <p className="text-sm text-muted-foreground">If a code is required</p>
+                <Input
+                  id="code"
+                  placeholder="e.g., SENIOR20, GOLDEN"
+                  {...register("code")}
+                />
+                {errors.code && (
+                  <p className="text-sm text-red-500">{errors.code.message}</p>
+                )}
               </div>
             </div>
 
+            {/* Location and Website */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start">Start Date</Label>
-                <Input id="start" type="date" {...register("start")} className="rounded-lg" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="end">End Date</Label>
-                <Input id="end" type="date" {...register("end")} className="rounded-lg" />
-                {errors.end && <p className="text-sm text-destructive">{errors.end.message}</p>}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Where it applies */}
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold tracking-tight">Where it applies</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="scope">Scope *</Label>
-              <Select onValueChange={(value) => setValue("scope", value as any)}>
-                <SelectTrigger id="scope" className="rounded-lg">
-                  <SelectValue placeholder="Select scope" />
-                </SelectTrigger>
-                <SelectContent>
-                  {scopeOptions.map((scope) => (
-                    <SelectItem key={scope} value={scope}>
-                      {scope}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.scope && <p className="text-sm text-destructive">{errors.scope.message}</p>}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="zip">ZIP Code *</Label>
-                <Input id="zip" {...register("zip")} className="rounded-lg" placeholder="12345" maxLength={5} />
-                <p className="text-sm text-muted-foreground">Primary location ZIP code</p>
-                {errors.zip && <p className="text-sm text-destructive">{errors.zip.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">Specific Location</Label>
+                <Label htmlFor="location">Location</Label>
                 <Input
                   id="location"
+                  placeholder="e.g., Downtown location, Main Street"
                   {...register("location")}
-                  className="rounded-lg"
-                  placeholder="e.g., Downtown location only"
                 />
-                <p className="text-sm text-muted-foreground">If applicable</p>
+                {errors.location && (
+                  <p className="text-sm text-red-500">{errors.location.message}</p>
+                )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="website">Website</Label>
                 <Input
                   id="website"
-                  type="url"
+                  placeholder="https://yourbusiness.com"
                   {...register("website")}
-                  className="rounded-lg"
-                  placeholder="https://yourwebsite.com"
                 />
-                {errors.website && <p className="text-sm text-destructive">{errors.website.message}</p>}
+                {errors.website && (
+                  <p className="text-sm text-red-500">{errors.website.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Phone and Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  placeholder="e.g., (555) 123-4567"
+                  {...register("phone")}
+                />
+                {errors.phone && (
+                  <p className="text-sm text-red-500">{errors.phone.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" {...register("phone")} className="rounded-lg" placeholder="(555) 123-4567" />
+                <Label htmlFor="start">Start Date</Label>
+                <Input
+                  id="start"
+                  type="date"
+                  {...register("start")}
+                />
+                {errors.start && (
+                  <p className="text-sm text-red-500">{errors.start.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* End Date and Notes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="end">End Date</Label>
+                <Input
+                  id="end"
+                  type="date"
+                  {...register("end")}
+                />
+                {errors.end && (
+                  <p className="text-sm text-red-500">{errors.end.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Any additional information about the discount..."
+                  {...register("notes")}
+                  rows={3}
+                />
+                {errors.notes && (
+                  <p className="text-sm text-red-500">{errors.notes.message}</p>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Verification */}
+        {/* Terms and Conditions */}
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold tracking-tight">Verification</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight">Terms & Conditions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="proof">Proof URL *</Label>
-              <Input
-                id="proof"
-                type="url"
-                {...register("proof")}
-                className="rounded-lg"
-                placeholder="https://link-to-discount-proof.com"
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="ownerConfirm"
+                checked={watchedValues.ownerConfirm}
+                onCheckedChange={(checked) => setValue("ownerConfirm", checked as boolean)}
+                className={errors.ownerConfirm ? "border-red-500" : ""}
               />
-              <p className="text-sm text-muted-foreground">
-                Link to your website, flyer, or other proof of this discount
-              </p>
-              {errors.proof && <p className="text-sm text-destructive">{errors.proof.message}</p>}
+              <div className="space-y-1">
+                <Label htmlFor="ownerConfirm" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  I confirm that I am the business owner or authorized representative
+                </Label>
+                {errors.ownerConfirm && (
+                  <p className="text-sm text-red-500">{errors.ownerConfirm.message}</p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes</Label>
-              <Textarea
-                id="notes"
-                {...register("notes")}
-                className="rounded-lg"
-                placeholder="Any additional details about this discount..."
-                rows={3}
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="tos"
+                checked={watchedValues.tos}
+                onCheckedChange={(checked) => setValue("tos", checked as boolean)}
+                className={errors.tos ? "border-red-500" : ""}
               />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="ownerConfirm"
-                  checked={watchedValues.ownerConfirm}
-                  onCheckedChange={(checked) => setValue("ownerConfirm", !!checked)}
-                />
-                <Label htmlFor="ownerConfirm" className="text-sm leading-5">
-                  I confirm that I am the owner or authorized representative of this business *
+              <div className="space-y-1">
+                <Label htmlFor="tos" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  I accept the terms of service and privacy policy
                 </Label>
+                {errors.tos && (
+                  <p className="text-sm text-red-500">{errors.tos.message}</p>
+                )}
               </div>
-              {errors.ownerConfirm && <p className="text-sm text-destructive">{errors.ownerConfirm.message}</p>}
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="tos"
-                  checked={watchedValues.tos}
-                  onCheckedChange={(checked) => setValue("tos", !!checked)}
-                />
-                <Label htmlFor="tos" className="text-sm leading-5">
-                  I accept the Terms of Service and Privacy Policy *
-                </Label>
-              </div>
-              {errors.tos && <p className="text-sm text-destructive">{errors.tos.message}</p>}
             </div>
-
-            {/* Honeypot field */}
-            <input type="text" {...register("hp")} style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
           </CardContent>
         </Card>
 
-        {/* Action buttons */}
+        {/* reCAPTCHA Status */}
+        {!isRecaptchaLoaded && (
+          <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800">
+              Loading reCAPTCHA protection... Please wait before submitting.
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button type="button" variant="outline" onClick={() => setShowPreview(!showPreview)} className="rounded-lg">
-            <Eye className="h-4 w-4 mr-2" />
-            {showPreview ? "Hide Preview" : "Preview"}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowPreview(!showPreview)}
+            className="flex-1"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            {showPreview ? "Hide Preview" : "Preview Discount"}
           </Button>
 
-          <Button type="submit" disabled={!isValid || isSubmitting} className="rounded-lg">
+          <Button
+            type="submit"
+            disabled={!isValid || isSubmitting || !isRecaptchaLoaded || isRecaptchaExecuting}
+            className="flex-1"
+          >
             {isSubmitting ? (
-              "Submitting..."
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Submitting...
+              </>
             ) : (
               <>
-                <Check className="h-4 w-4 mr-2" />
+                <Check className="w-4 h-4 mr-2" />
                 Submit Discount
               </>
             )}
@@ -421,17 +551,12 @@ export function OwnerSubmitForm() {
         </div>
       </form>
 
-      {/* Preview */}
+      {/* Preview Section */}
       {showPreview && (
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold tracking-tight">Preview</CardTitle>
-            <p className="text-muted-foreground">This is how your discount will appear to users</p>
-          </CardHeader>
-          <CardContent>
-            <DiscountCard discount={previewDiscount} />
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Preview</h3>
+          <DiscountCard discount={previewDiscount} />
+        </div>
       )}
     </div>
   )
