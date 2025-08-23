@@ -567,7 +567,7 @@ export function OwnerSubmitForm() {
             <p>Owner Confirm: {watchedValues.ownerConfirm ? 'Yes' : 'No'}</p>
             <p>Terms: {watchedValues.tos ? 'Yes' : 'No'}</p>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
             <Button 
               type="button" 
               variant="outline" 
@@ -580,6 +580,33 @@ export function OwnerSubmitForm() {
               }}
             >
               Debug: Trigger Validation
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={async () => {
+                console.log('reCAPTCHA status check:')
+                console.log('- window.grecaptcha:', !!window.grecaptcha)
+                console.log('- isLoaded:', isRecaptchaLoaded)
+                console.log('- isExecuting:', isRecaptchaExecuting)
+                console.log('- Site key:', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY)
+                
+                if (window.grecaptcha) {
+                  console.log('- grecaptcha.ready exists:', !!window.grecaptcha.ready)
+                  console.log('- grecaptcha.execute exists:', !!window.grecaptcha.execute)
+                }
+                
+                try {
+                  const token = await executeRecaptcha('test_action')
+                  console.log('reCAPTCHA test successful, token:', token ? 'Received' : 'None')
+                } catch (error) {
+                  console.error('reCAPTCHA test failed:', error)
+                }
+              }}
+            >
+              Debug: Test reCAPTCHA
             </Button>
           </div>
         </div>
