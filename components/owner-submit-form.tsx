@@ -67,13 +67,15 @@ export function OwnerSubmitForm() {
     console.log('Form errors:', errors)
     console.log('Form isValid:', isValid)
     console.log('Form values:', watchedValues)
-  }, [errors, isValid, watchedValues])
+    console.log('Form state:', form.getValues())
+  }, [errors, isValid, watchedValues, form])
 
   useEffect(() => {
     const savedDraft = sessionStorage.getItem(STORAGE_KEY)
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft)
+        console.log('Restoring draft:', draft)
         Object.keys(draft).forEach((key) => {
           setValue(key as keyof OwnerSubmitData, draft[key])
         })
@@ -82,7 +84,8 @@ export function OwnerSubmitForm() {
       }
     }
     setIsInitialized(true)
-  }, [setValue])
+    console.log('Form initialized with values:', form.getValues())
+  }, [setValue, form])
 
   const saveDraft = useCallback((values: OwnerSubmitData) => {
     if (saveTimeoutRef.current) {
@@ -109,6 +112,23 @@ export function OwnerSubmitForm() {
   }, [])
 
   const onSubmit = async (data: OwnerSubmitData) => {
+    console.log('Form submission data:', data)
+    console.log('Form errors before submission:', errors)
+    
+    // Manual validation check
+    const isValid = await form.trigger()
+    console.log('Manual validation result:', isValid)
+    
+    if (!isValid) {
+      console.log('Form validation failed:', errors)
+      toast({
+        title: "Validation Error",
+        description: "Please fix the form errors before submitting.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     if (!isRecaptchaLoaded) {
       toast({
         title: "Error",
@@ -225,7 +245,8 @@ export function OwnerSubmitForm() {
               <Input
                 id="business"
                 placeholder="Enter your business name"
-                {...register("business")}
+                value={watchedValues.business}
+                onChange={(e) => setValue("business", e.target.value)}
                 className={errors.business ? "border-red-500" : ""}
               />
               {errors.business && (
@@ -262,7 +283,8 @@ export function OwnerSubmitForm() {
                 <Input
                   id="amount"
                   placeholder="e.g., 20% off, $5 discount"
-                  {...register("amount")}
+                  value={watchedValues.amount}
+                  onChange={(e) => setValue("amount", e.target.value)}
                   className={errors.amount ? "border-red-500" : ""}
                 />
                 {errors.amount && (
@@ -277,7 +299,7 @@ export function OwnerSubmitForm() {
                 <Label htmlFor="minAge">Minimum Age *</Label>
                 <Select
                   value={watchedValues.minAge}
-                  onValueChange={(value) => setValue("minAge", value)}
+                  onValueChange={(value) => setValue("minAge", value as "50" | "55" | "60" | "62" | "65")}
                 >
                   <SelectTrigger className={errors.minAge ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select minimum age" />
@@ -299,7 +321,7 @@ export function OwnerSubmitForm() {
                 <Label htmlFor="scope">Scope *</Label>
                 <Select
                   value={watchedValues.scope}
-                  onValueChange={(value) => setValue("scope", value)}
+                  onValueChange={(value) => setValue("scope", value as "Nationwide" | "Specific locations" | "Online only")}
                 >
                   <SelectTrigger className={errors.scope ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select scope" />
@@ -325,7 +347,8 @@ export function OwnerSubmitForm() {
                 <Input
                   id="zip"
                   placeholder="Enter 5-digit ZIP code"
-                  {...register("zip")}
+                  value={watchedValues.zip}
+                  onChange={(e) => setValue("zip", e.target.value)}
                   className={errors.zip ? "border-red-500" : ""}
                 />
                 {errors.zip && (
@@ -338,7 +361,8 @@ export function OwnerSubmitForm() {
                 <Input
                   id="proof"
                   placeholder="https://example.com/discount-proof"
-                  {...register("proof")}
+                  value={watchedValues.proof}
+                  onChange={(e) => setValue("proof", e.target.value)}
                   className={errors.proof ? "border-red-500" : ""}
                 />
                 {errors.proof && (
@@ -371,7 +395,8 @@ export function OwnerSubmitForm() {
                 <Input
                   id="days"
                   placeholder="e.g., Monday-Friday, Weekends only"
-                  {...register("days")}
+                  value={watchedValues.days || ""}
+                  onChange={(e) => setValue("days", e.target.value)}
                 />
                 {errors.days && (
                   <p className="text-sm text-red-500">{errors.days.message}</p>
@@ -383,7 +408,8 @@ export function OwnerSubmitForm() {
                 <Input
                   id="code"
                   placeholder="e.g., SENIOR20, GOLDEN"
-                  {...register("code")}
+                  value={watchedValues.code || ""}
+                  onChange={(e) => setValue("code", e.target.value)}
                 />
                 {errors.code && (
                   <p className="text-sm text-red-500">{errors.code.message}</p>
@@ -398,7 +424,8 @@ export function OwnerSubmitForm() {
                 <Input
                   id="location"
                   placeholder="e.g., Downtown location, Main Street"
-                  {...register("location")}
+                  value={watchedValues.location || ""}
+                  onChange={(e) => setValue("location", e.target.value)}
                 />
                 {errors.location && (
                   <p className="text-sm text-red-500">{errors.location.message}</p>
@@ -527,6 +554,36 @@ export function OwnerSubmitForm() {
         )}
 
         {/* Form Validation Debug */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-semibold text-blue-800 mb-2">Form Debug Info:</h4>
+          <div className="text-sm text-blue-700 space-y-1">
+            <p>Business: "{watchedValues.business}" (Length: {watchedValues.business?.length || 0})</p>
+            <p>Amount: "{watchedValues.amount}" (Length: {watchedValues.amount?.length || 0})</p>
+            <p>ZIP: "{watchedValues.zip}" (Length: {watchedValues.zip?.length || 0})</p>
+            <p>Proof: "{watchedValues.proof}" (Length: {watchedValues.proof?.length || 0})</p>
+            <p>Category: "{watchedValues.category}"</p>
+            <p>Min Age: "{watchedValues.minAge}"</p>
+            <p>Scope: "{watchedValues.scope}"</p>
+            <p>Owner Confirm: {watchedValues.ownerConfirm ? 'Yes' : 'No'}</p>
+            <p>Terms: {watchedValues.tos ? 'Yes' : 'No'}</p>
+          </div>
+          <div className="mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={async () => {
+                const result = await form.trigger()
+                console.log('Manual validation result:', result)
+                console.log('Current errors:', errors)
+                console.log('Form values:', form.getValues())
+              }}
+            >
+              Debug: Trigger Validation
+            </Button>
+          </div>
+        </div>
+
         {Object.keys(errors).length > 0 && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
             <h4 className="font-semibold text-red-800 mb-2">Form Validation Errors:</h4>
@@ -548,6 +605,20 @@ export function OwnerSubmitForm() {
           >
             <Eye className="w-4 h-4 mr-2" />
             {showPreview ? "Hide Preview" : "Preview Discount"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={async () => {
+              console.log('Current form values:', form.getValues())
+              console.log('Current errors:', errors)
+              const result = await form.trigger()
+              console.log('Validation result:', result)
+            }}
+            className="flex-1"
+          >
+            Test Validation
           </Button>
 
           <Button
