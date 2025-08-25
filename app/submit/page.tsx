@@ -24,7 +24,7 @@ export default function SubmitPage() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-black">
                 Submit a Senior Discount
               </h1>
-              <p className="text-black leading-7 max-w-2xl mx-auto font-bold text-lg">
+              <p className="text-black leading-7 max-w-2xl mx-auto font-bold text-xl">
                 Help seniors in your community save money by listing your business discount. All submissions are reviewed
                 before being published.
               </p>

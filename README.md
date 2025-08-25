@@ -118,6 +118,14 @@ This ensures that:
 - New submissions are allowed after 24 hours
 - ZIP code variations allow local business chains
 
+### Automatic Expiration Cleanup
+The system automatically maintains a clean discount list:
+- **Real-time Cleanup**: Expired discounts are automatically moved to TRASH status
+- **API Integration**: Cleanup happens on every public and admin API call
+- **Status Management**: Expired discounts never appear in public search results
+- **Admin Monitoring**: Dashboard shows cleanup status and expiring soon warnings
+- **Manual Override**: Admins can trigger manual cleanup if needed
+
 ## 📧 Email System
 
 ### Nodemailer Configuration

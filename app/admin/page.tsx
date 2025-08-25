@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Eye, Check, X, LogOut } from "lucide-react"
+import { Eye, Check, X, LogOut, Clock, AlertTriangle } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -155,6 +155,17 @@ export default function AdminPage() {
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">Moderator Dashboard</h1>
             <p className="text-slate-700 dark:text-slate-300 leading-7">Review and manage discount submissions</p>
+            
+            {/* Auto-cleanup Info */}
+            <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                <Clock className="h-5 w-5" />
+                <span className="font-semibold">Automatic Cleanup Active</span>
+              </div>
+              <p className="text-amber-700 dark:text-amber-300 mt-1 text-sm">
+                Expired discounts are automatically moved to TRASH status to keep the list clean and current.
+              </p>
+            </div>
           </div>
 
           {/* Filters and Actions */}
@@ -178,6 +189,33 @@ export default function AdminPage() {
                   Approve Selected ({selectedDiscounts.length})
                 </Button>
               )}
+              <Button 
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/admin/cleanup-expired', { method: 'POST' })
+                    if (response.ok) {
+                      toast({
+                        title: "Cleanup Complete",
+                        description: "Expired discounts have been moved to TRASH",
+                      })
+                      // Refresh the data
+                      mutate()
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Cleanup Failed",
+                      description: "Failed to cleanup expired discounts",
+                      variant: "destructive",
+                    })
+                  }
+                }} 
+                variant="outline" 
+                size="sm"
+                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                Manual Cleanup
+              </Button>
               <Button onClick={handleLogout} variant="outline" size="sm">
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -237,7 +275,22 @@ export default function AdminPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{discount.minAge}+</TableCell>
-                    <TableCell>{discount.endDate ? formatDate(discount.endDate) : "No end date"}</TableCell>
+                    <TableCell>
+                      {discount.endDate ? (
+                        <div className="flex items-center gap-2">
+                          <span>{formatDate(discount.endDate)}</span>
+                          {new Date(discount.endDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) && 
+                           new Date(discount.endDate) > new Date() && (
+                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Expires Soon
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        "No end date"
+                      )}
+                    </TableCell>
                     <TableCell>
                       {discount.sponsored ? (
                         <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">

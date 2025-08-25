@@ -64,6 +64,7 @@ export type OwnerSubmitData = z.infer<typeof OwnerSubmitSchema>
 
 export const categories = [
   "Restaurants & Food",
+  "Groceries",
   "Retail & Shopping",
   "Healthcare & Medical",
   "Travel & Lodging",

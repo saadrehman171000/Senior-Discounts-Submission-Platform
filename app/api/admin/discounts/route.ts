@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAdminFromRequest } from '@/lib/auth'
 import { AdminDiscountQuerySchema } from '@/lib/schemas'
 import { handleError, ValidationError } from '@/lib/errors'
+import { cleanupExpiredDiscounts } from '@/lib/discount-management'
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,9 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url)
     const query = AdminDiscountQuerySchema.parse(Object.fromEntries(searchParams))
+
+    // Automatically move expired discounts to TRASH status
+    await cleanupExpiredDiscounts()
 
     // Build where clause based on status
     const where: any = {}
