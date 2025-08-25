@@ -7,7 +7,7 @@ import { prepareDiscountForInsert, normalizeDiscountsList } from '@/lib/normaliz
 import { cacheList, bustListCache } from '@/lib/cache'
 import { handleError, ValidationError, RecaptchaError, ConflictError } from '@/lib/errors'
 import { validateContentType, validatePayloadSize, sanitizeDiscountData } from '@/lib/security'
-import { cleanupExpiredDiscounts } from '@/lib/discount-management'
+import { cleanupExpiredDiscounts, autoApprovePendingDiscounts } from '@/lib/discount-management'
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
@@ -128,6 +128,12 @@ export async function GET(request: NextRequest) {
     const cacheKey = `discounts:${JSON.stringify(query)}`
     
     const result = await cacheList(cacheKey, async () => {
+      // Automatically approve pending discounts that are older than 24 hours
+      await autoApprovePendingDiscounts()
+      
+      // Automatically move expired discounts to TRASH status
+      await cleanupExpiredDiscounts()
+
       // Build where clause: only published, not expired
       const where = {
         status: 'PUBLISHED',
@@ -136,9 +142,6 @@ export async function GET(request: NextRequest) {
           { endDate: { gt: new Date() } } // Not expired
         ]
       }
-
-      // Automatically move expired discounts to TRASH status
-      await cleanupExpiredDiscounts()
 
       // Add filters
       if (query.zip) {

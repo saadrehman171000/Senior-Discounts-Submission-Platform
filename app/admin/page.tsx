@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import { Header } from "@/components/header"
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Eye, Check, X, LogOut, Clock, AlertTriangle } from "lucide-react"
+import { Eye, Check, X, LogOut, Clock, AlertTriangle, Zap } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -33,6 +33,10 @@ export default function AdminPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([])
   const [denyReason, setDenyReason] = useState("")
+  const [autoApprovalInfo, setAutoApprovalInfo] = useState<{
+    pendingReady: number
+    lastAutoApproval: string | null
+  }>({ pendingReady: 0, lastAutoApproval: null })
   const { toast } = useToast()
   const router = useRouter()
 
@@ -49,8 +53,6 @@ export default function AdminPage() {
     `/api/admin/discounts?status=${statusFilter}&page=${currentPage}`,
     fetcher,
   )
-
-
 
   const handleApprove = async (id: string) => {
     try {
@@ -123,6 +125,33 @@ export default function AdminPage() {
     }
   }
 
+  const handleAutoApprove = async () => {
+    try {
+      const response = await fetch('/api/admin/auto-approve', { method: 'POST' })
+      if (response.ok) {
+        const result = await response.json()
+        toast({
+          title: "Auto-Approval Complete",
+          description: `${result.approved} discounts have been automatically approved`,
+        })
+        // Refresh the data
+        mutate()
+        // Update auto-approval info
+        setAutoApprovalInfo(prev => ({
+          ...prev,
+          lastAutoApproval: new Date().toISOString(),
+          pendingReady: 0
+        }))
+      }
+    } catch (error) {
+      toast({
+        title: "Auto-Approval Failed",
+        description: "Failed to trigger auto-approval",
+        variant: "destructive",
+      })
+    }
+  }
+
   const discounts = data?.items || []
   const totalPages = data?.totalPages || 1
 
@@ -153,16 +182,32 @@ export default function AdminPage() {
       <main className="flex-1 py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">Moderator Dashboard</h1>
-            <p className="text-slate-700 dark:text-slate-300 leading-7">Review and manage discount submissions</p>
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 text-black">Moderator Dashboard</h1>
+            <p className="text-black leading-7 font-medium">Review and manage discount submissions</p>
             
-            {/* Auto-cleanup Info */}
+            {/* Auto-Approval System Info */}
             <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <div className="flex items-center gap-2 text-black">
+                <Zap className="h-5 w-5" />
+                <span className="font-semibold">Automatic Approval System Active</span>
+              </div>
+              <p className="text-black mt-1 text-sm font-medium">
+                Pending discounts are automatically approved after 24 hours. You can also manually trigger auto-approval.
+              </p>
+              {autoApprovalInfo.lastAutoApproval && (
+                <p className="text-black mt-1 text-xs font-medium">
+                  Last auto-approval: {new Date(autoApprovalInfo.lastAutoApproval).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* Auto-cleanup Info */}
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center gap-2 text-black">
                 <Clock className="h-5 w-5" />
                 <span className="font-semibold">Automatic Cleanup Active</span>
               </div>
-              <p className="text-amber-700 dark:text-amber-300 mt-1 text-sm">
+              <p className="text-black mt-1 text-sm font-medium">
                 Expired discounts are automatically moved to TRASH status to keep the list clean and current.
               </p>
             </div>
@@ -177,8 +222,8 @@ export default function AdminPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="denied">Denied</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="trash">Trash</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -187,6 +232,17 @@ export default function AdminPage() {
               {selectedDiscounts.length > 0 && (
                 <Button onClick={handleBulkApprove} className="rounded-lg">
                   Approve Selected ({selectedDiscounts.length})
+                </Button>
+              )}
+              {statusFilter === "pending" && (
+                <Button 
+                  onClick={handleAutoApprove}
+                  variant="outline" 
+                  size="sm"
+                  className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Auto-Approve Ready
                 </Button>
               )}
               <Button 
@@ -211,7 +267,7 @@ export default function AdminPage() {
                 }} 
                 variant="outline" 
                 size="sm"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Manual Cleanup
@@ -269,11 +325,7 @@ export default function AdminPage() {
                     </TableCell>
                     <TableCell className="font-medium">{discount.title}</TableCell>
                     <TableCell>{discount.zip}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {discount.category}
-                      </Badge>
-                    </TableCell>
+                    <TableCell>{discount.category}</TableCell>
                     <TableCell>{discount.minAge}+</TableCell>
                     <TableCell>
                       {discount.endDate ? (
@@ -293,11 +345,11 @@ export default function AdminPage() {
                     </TableCell>
                     <TableCell>
                       {discount.sponsored ? (
-                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                          Yes
+                        <Badge variant="default" className="bg-purple-100 text-purple-800">
+                          Sponsored
                         </Badge>
                       ) : (
-                        "No"
+                        <Badge variant="outline">Standard</Badge>
                       )}
                     </TableCell>
                     <TableCell>{formatDate(discount.createdAt)}</TableCell>
@@ -305,31 +357,107 @@ export default function AdminPage() {
                       <div className="flex items-center gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                              <Eye className="h-3 w-3" />
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>Discount Details</DialogTitle>
                             </DialogHeader>
-                            <div className="mt-4">
-                              <DiscountCard discount={{
-                                id: discount.id,
-                                businessName: discount.title,
-                                category: discount.category,
-                                zip: discount.zip,
-                                amount: discount.sd?.amount || 'N/A',
-                                days: discount.sd?.days,
-                                code: discount.sd?.code,
-                                validFrom: discount.sd?.start,
-                                validUntil: discount.endDate,
-                                location: discount.sd?.location,
-                                website: discount.sd?.website,
-                                proof: discount.sd?.proof,
-                                phone: discount.sd?.phone,
-                                sponsored: discount.sponsored,
-                              }} />
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium text-slate-700">Business Name</label>
+                                  <p className="text-sm text-slate-900 font-medium">{discount.title}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-slate-700">ZIP Code</label>
+                                  <p className="text-sm text-slate-900 font-medium">{discount.zip}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-slate-700">Category</label>
+                                  <p className="text-sm text-slate-900 font-medium">{discount.category}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-slate-700">Minimum Age</label>
+                                  <p className="text-sm text-slate-900 font-medium">{discount.minAge}+</p>
+                                </div>
+                              </div>
+                              
+                              {discount.sd && (
+                                <div className="space-y-4">
+                                  <div className="border-t border-slate-200 pt-4">
+                                    <h4 className="text-sm font-semibold text-slate-800 mb-3">Discount Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      {discount.sd.amount && (
+                                        <div>
+                                          <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Discount Amount</label>
+                                          <p className="text-sm text-slate-900 font-medium">{discount.sd.amount}</p>
+                                        </div>
+                                      )}
+                                      {discount.sd.days && (
+                                        <div>
+                                          <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Valid Days</label>
+                                          <p className="text-sm text-slate-900 font-medium">{discount.sd.days}</p>
+                                        </div>
+                                      )}
+                                      {discount.sd.code && (
+                                        <div>
+                                          <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Promo Code</label>
+                                          <p className="text-sm text-slate-900 font-medium">{discount.sd.code}</p>
+                                        </div>
+                                      )}
+                                      {discount.sd.location && (
+                                        <div>
+                                          <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Location</label>
+                                          <p className="text-sm text-slate-900 font-medium">{discount.sd.location}</p>
+                                        </div>
+                                      )}
+                                      {discount.sd.scope && (
+                                        <div>
+                                          <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Scope</label>
+                                          <p className="text-sm text-slate-900 font-medium">{discount.sd.scope}</p>
+                                        </div>
+                                      )}
+                                      {discount.sd.website && (
+                                        <div>
+                                          <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Website</label>
+                                          <p className="text-sm text-slate-900 font-medium">
+                                            <a href={discount.sd.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                                              Visit Website
+                                            </a>
+                                          </p>
+                                        </div>
+                                      )}
+                                      {discount.sd.phone && (
+                                        <div>
+                                          <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Phone</label>
+                                          <p className="text-sm text-slate-900 font-medium">{discount.sd.phone}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {discount.sd.proof && (
+                                    <div className="border-t border-slate-200 pt-4">
+                                      <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Proof/Reference</label>
+                                      <p className="text-sm text-slate-900 font-medium">
+                                        <a href={discount.sd.proof} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                                          View Proof
+                                        </a>
+                                      </p>
+                                    </div>
+                                  )}
+                                  
+                                  {discount.sd.notes && (
+                                    <div className="border-t border-slate-200 pt-4">
+                                      <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Additional Notes</label>
+                                      <p className="text-sm text-slate-900 font-medium">{discount.sd.notes}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </DialogContent>
                         </Dialog>
@@ -337,22 +465,16 @@ export default function AdminPage() {
                         {statusFilter === "pending" && (
                           <>
                             <Button
-                              variant="outline"
-                              size="sm"
                               onClick={() => handleApprove(discount.id)}
-                              className="rounded-lg text-emerald-600 hover:text-emerald-700"
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
                             >
-                              <Check className="h-3 w-3" />
+                              <Check className="h-4 w-4" />
                             </Button>
-
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-lg text-rose-600 hover:text-rose-700 bg-transparent"
-                                >
-                                  <X className="h-3 w-3" />
+                                <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-50">
+                                  <X className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -366,16 +488,15 @@ export default function AdminPage() {
                                   placeholder="Reason for denial..."
                                   value={denyReason}
                                   onChange={(e) => setDenyReason(e.target.value)}
-                                  className="rounded-lg"
+                                  className="min-h-[100px]"
                                 />
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setDenyReason("")}>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleDeny(discount.id, denyReason)}
-                                    disabled={!denyReason.trim()}
-                                    className="bg-rose-600 hover:bg-rose-700"
+                                    className="bg-red-600 hover:bg-red-700"
                                   >
-                                    Deny Discount
+                                    Deny
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -390,53 +511,30 @@ export default function AdminPage() {
             </Table>
           </div>
 
-          {discounts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📋</div>
-              <h3 className="text-xl font-semibold mb-2">No discounts found</h3>
-              <p className="text-muted-foreground">No discounts match the current filter criteria.</p>
-            </div>
-          )}
-
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-8">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage <= 1}
-                className="rounded-lg"
-              >
-                Previous
-              </Button>
-
-              <div className="flex gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className="rounded-lg w-10"
-                    >
-                      {page}
-                    </Button>
-                  )
-                })}
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-slate-600">
+                Page {currentPage} of {totalPages}
               </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage >= totalPages}
-                className="rounded-lg"
-              >
-                Next
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </div>

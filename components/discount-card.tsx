@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ExternalLink, Phone, Star } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { MapPin, Phone, Globe, Clock, Calendar, Percent, ExternalLink } from "lucide-react"
+import Link from "next/link"
 
 interface DiscountCardProps {
   discount: {
@@ -17,14 +17,13 @@ interface DiscountCardProps {
     validUntil?: string
     location?: string
     website?: string
-    proof: string
+    proof?: string
     phone?: string
     sponsored?: boolean
   }
-  className?: string
 }
 
-export function DiscountCard({ discount, className }: DiscountCardProps) {
+export function DiscountCard({ discount }: DiscountCardProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -34,124 +33,114 @@ export function DiscountCard({ discount, className }: DiscountCardProps) {
   }
 
   return (
-    <Card
-      className={cn(
-        "rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:ring-2 hover:ring-amber-500/30 bg-white dark:bg-slate-50",
-        className,
-      )}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-3">
-              {discount.sponsored && (
-                <>
-                  <Star className="h-4 w-4 text-amber-500 fill-current" />
-                  <Badge
-                    variant="secondary"
-                    className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 text-xs"
-                  >
-                    Sponsored
-                  </Badge>
-                </>
-              )}
-              <Badge variant="outline" className="text-xs font-medium bg-slate-100 dark:bg-slate-200 text-slate-700 dark:text-slate-800 border-slate-300 dark:border-slate-400">
+    <Card className={`
+      "rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:ring-2 hover:ring-amber-500/30 bg-white dark:bg-slate-50",
+      ${discount.sponsored ? 'ring-2 ring-purple-500/30 border-purple-200' : ''}
+    `}>
+      <CardHeader className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-t-2xl pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <Link href={`/discount/${discount.id}`} className="group">
+              <h3 className="text-xl font-bold text-black group-hover:text-amber-700 transition-colors cursor-pointer">
+                {discount.businessName}
+              </h3>
+            </Link>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge variant="secondary" className="bg-white text-slate-800 border border-amber-200 text-xs">
                 {discount.category}
               </Badge>
-              <span className="text-sm text-slate-600 dark:text-slate-700 font-medium">
-                📍 {discount.zip}
-              </span>
+              {discount.sponsored && (
+                <Badge variant="default" className="bg-purple-100 text-purple-800 text-xs">
+                  Sponsored
+                </Badge>
+              )}
             </div>
-            <h3 className="text-xl font-bold tracking-tight leading-tight text-slate-900 dark:text-slate-800 mb-2">
-              {discount.businessName}
-            </h3>
           </div>
         </div>
       </CardHeader>
-
-      <CardContent className="pt-0">
-        <div className="space-y-4">
-          {/* Main discount info */}
-          <div className="space-y-3">
-            <div className="text-xl font-bold text-slate-900 dark:text-slate-800 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-100/50 dark:to-orange-100/50 p-3 rounded-lg border border-amber-200 dark:border-amber-300/50">
-              {discount.amount}
-            </div>
-            
-            {/* Additional details in organized layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              {discount.days && (
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-600 dark:text-slate-700 font-medium">Valid Days:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-900">{discount.days}</span>
-                </div>
-              )}
-              
-              {discount.code && (
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-600 dark:text-slate-700 font-medium">Promo Code:</span>
-                  <span className="font-mono font-bold text-amber-700 dark:text-amber-800 bg-amber-100 dark:bg-amber-200 px-3 py-1 rounded-lg border border-amber-300 dark:border-amber-400">
-                    {discount.code}
-                  </span>
-                </div>
-              )}
-              
-              {discount.location && (
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-600 dark:text-slate-700 font-medium">Location:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-900">{discount.location}</span>
-                </div>
-              )}
-              
-              {(discount.validFrom || discount.validUntil) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-600 dark:text-slate-700 font-medium">Valid:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-900">
-                    {discount.validFrom && formatDate(discount.validFrom)}
-                    {discount.validFrom && discount.validUntil && " - "}
-                    {discount.validUntil && formatDate(discount.validUntil)}
-                  </span>
-                </div>
-              )}
-            </div>
+      
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Discount Amount */}
+          <div className="flex items-center gap-2">
+            <Percent className="h-4 w-4 text-amber-600" />
+            <span className="text-lg font-semibold text-black">{discount.amount}</span>
           </div>
 
-          {/* Actions row */}
-          <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-200 dark:border-slate-300">
-            <Button variant="outline" size="sm" asChild className="rounded-lg bg-white dark:bg-slate-100 hover:bg-slate-50 dark:hover:bg-slate-200 border-slate-300 dark:border-slate-400 text-slate-700 dark:text-slate-800 hover:text-slate-900 dark:hover:text-slate-900">
-              <a
-                href={discount.proof}
-                target="_blank"
-                rel="noreferrer nofollow noopener"
-                className="inline-flex items-center"
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                View Proof
-              </a>
-            </Button>
+          {/* Promo Code */}
+          {discount.code && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-600">Code:</span>
+              <Badge variant="outline" className="font-mono text-xs">
+                {discount.code}
+              </Badge>
+            </div>
+          )}
 
+          {/* Valid Days */}
+          {discount.days && (
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 text-slate-500 mt-0.5" />
+              <span className="text-sm text-slate-700">{discount.days}</span>
+            </div>
+          )}
+
+          {/* Validity Period */}
+          {(discount.validFrom || discount.validUntil) && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-slate-500" />
+              <div className="text-sm text-slate-700">
+                {discount.validFrom && (
+                  <div>From: {formatDate(discount.validFrom)}</div>
+                )}
+                {discount.validUntil && (
+                  <div>Until: {formatDate(discount.validUntil)}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Location */}
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-slate-500" />
+            <span className="text-sm text-slate-700">
+              {discount.location && `${discount.location}, `}
+              ZIP: {discount.zip}
+            </span>
+          </div>
+
+          {/* Contact Information */}
+          <div className="flex flex-wrap gap-3 pt-2">
+            {discount.phone && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-3 w-3 text-slate-500" />
+                <span className="text-xs text-slate-600">{discount.phone}</span>
+              </div>
+            )}
             {discount.website && (
-              <Button variant="outline" size="sm" asChild className="rounded-lg bg-white dark:bg-slate-100 hover:bg-slate-50 dark:hover:bg-slate-200 border-slate-300 dark:border-slate-400 text-slate-700 dark:text-slate-800 hover:text-slate-900 dark:hover:text-slate-900">
-                <a
-                  href={discount.website}
-                  target="_blank"
-                  rel="noreferrer nofollow noopener"
-                  className="inline-flex items-center"
+              <div className="flex items-center gap-2">
+                <Globe className="h-3 w-3 text-slate-500" />
+                <a 
+                  href={discount.website} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
                 >
-                  <ExternalLink className="h-3 w-3 mr-1" />
                   Website
                 </a>
-              </Button>
-            )}
-
-            {discount.phone && (
-              <Button variant="outline" size="sm" asChild className="rounded-lg bg-white dark:bg-slate-100 hover:bg-slate-50 dark:hover:bg-slate-200 border-slate-300 dark:border-slate-400 text-slate-700 dark:text-slate-800 hover:text-slate-900 dark:hover:text-slate-900">
-                <a href={`tel:${discount.phone}`} className="inline-flex items-center">
-                  <Phone className="h-3 w-3 mr-1" />
-                  Call
-                </a>
-              </Button>
+              </div>
             )}
           </div>
+        </div>
+
+        {/* View Details Button */}
+        <div className="mt-4 pt-3 border-t border-slate-200">
+          <Link href={`/discount/${discount.id}`}>
+            <Button variant="outline" size="sm" className="w-full border-amber-300 text-amber-700 hover:bg-amber-50">
+              <ExternalLink className="h-3 w-3 mr-2" />
+              View Full Details
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>

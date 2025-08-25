@@ -1,122 +1,104 @@
-# Senior Discounts App - Backend Implementation
+# Senior Discounts App
 
-A secure, production-ready backend for the "Senior Discounts Near You" application built with Next.js 14, Prisma, PostgreSQL, Clerk, and more.
+A Next.js application for managing and discovering senior discounts in local communities.
 
-## 🏗️ Architecture Overview
+## Features
 
-### Tech Stack
+- **Business Submission**: Business owners can submit senior discount offers
+- **Admin Moderation**: Admin dashboard for reviewing and approving submissions
+- **Public Discovery**: Seniors can browse and search for available discounts
+- **Automatic Expiration Cleanup**: Expired discounts are automatically moved to TRASH status
+- **Automatic Approval System**: Pending discounts are automatically approved after 24 hours
+- **Individual Discount Pages**: Dedicated pages for each discount with unique URLs
+- **"See Other Deals" Navigation**: Easy navigation back to main discount board filtered by location
+
+## Tech Stack
+
 - **Framework**: Next.js 14 with App Router
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **UI Components**: shadcn/ui component library
 - **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Clerk (organizations + roles)
-- **Email**: Nodemailer with Gmail App Password
-- **Security**: reCAPTCHA v3, honeypot fields, rate limiting
-- **Caching**: Next.js built-in caching with tags
-- **Validation**: Zod schemas with comprehensive error handling
+- **Authentication**: Custom token-based admin authentication
+- **Data Fetching**: SWR for client-side data management
+- **Form Handling**: React Hook Form with Zod validation
+- **Email**: Nodemailer for notifications
+- **Security**: reCAPTCHA v3 (currently disabled), input sanitization
 
-### Project Structure
+## Project Structure
+
 ```
-app/
-├── api/                    # API routes
-│   ├── discounts/         # Public discount endpoints
-│   └── admin/            # Admin-only endpoints
-├── admin/                 # Admin dashboard
-├── submit/                # Discount submission form
-└── globals.css            # Global styles
-
-lib/                       # Utility libraries
-├── prisma.ts             # Database client
-├── schemas.ts            # Zod validation schemas
-├── normalize.ts          # Data transformation utilities
-├── recaptcha.ts          # reCAPTCHA verification
-├── email.ts              # Email service (Nodemailer)
-├── auth.ts               # Clerk authentication helpers
-├── cache.ts              # Caching utilities
-└── errors.ts             # Error handling
-
-middleware.ts              # Route protection
-prisma/                    # Database schema & migrations
-├── schema.prisma         # Database schema
-└── migrations/           # Database migrations
+senior-discounts-app/
+├── app/                    # Next.js App Router pages
+│   ├── admin/             # Admin dashboard
+│   ├── api/               # API routes
+│   ├── login/             # Admin login
+│   ├── submit/            # Discount submission form
+│   ├── terms/             # Terms of Service
+│   ├── privacy/           # Privacy Policy
+│   └── contact/           # Contact page
+├── components/            # Reusable UI components
+├── lib/                   # Utility functions and configurations
+├── prisma/                # Database schema and migrations
+└── public/                # Static assets
 ```
 
-## 🚀 Quick Start
+## Setup Instructions
 
-### 1. Environment Setup
-Copy the environment variables:
-```bash
-cp env.example .env.local
-```
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd senior-discounts-app
+   ```
 
-Fill in your actual values:
-- **Database**: Neon PostgreSQL connection string
-- **Clerk**: Authentication keys
-- **Gmail**: App password for email notifications
-- **reCAPTCHA**: v3 site and secret keys
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   pnpm install
+   ```
 
-### 2. Install Dependencies
-```bash
-pnpm install
-```
+3. **Environment setup**
+   ```bash
+   cp env.example .env.local
+   # Fill in your environment variables
+   ```
 
-### 3. Database Setup
-```bash
-# Generate Prisma client
-pnpm db:generate
+4. **Database setup**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
 
-# Push schema to database
-pnpm db:push
+5. **Run the development server**
+   ```bash
+   npm run dev
+   # or
+   pnpm dev
+   ```
 
-# Or run migrations
-pnpm db:migrate
+## Environment Variables
 
-# Open Prisma Studio (optional)
-pnpm db:studio
-```
+- `DATABASE_URL`: PostgreSQL connection string
+- `ADMIN_USERNAME`: Admin login username
+- `ADMIN_PASSWORD`: Admin login password
+- `SMTP_HOST`: SMTP server for email notifications
+- `SMTP_USER`: SMTP username
+- `SMTP_PASS`: SMTP password
+- `RECAPTCHA_SECRET_KEY`: Google reCAPTCHA secret key
 
-### 4. Development
-```bash
-pnpm dev
-```
+## Database Schema
 
-## 🔐 Authentication & Authorization
+### SeniorDiscount
+- Core discount information with JSON payload for flexibility
+- Status management (PENDING → PUBLISHED → TRASH)
+- Duplicate prevention with business normalization
+- Automatic expiration tracking
 
-### Clerk Integration
-- **Organizations**: Support for team-based access control
-- **Roles**: Admin, moderator, and member roles
-- **Metadata**: Custom user attributes and permissions
-- **Magic Links**: Email-based authentication for admins
+### AdminAuditLog
+- Audit trail for all admin actions
+- Tracks approvals, denials, and deletions
 
-### Route Protection
-- **Public Routes**: Homepage, submission form, public API
-- **Protected Routes**: Admin dashboard, admin API endpoints
-- **Role-Based Access**: Admin-only actions require proper permissions
-
-## 🗄️ Database Schema
-
-### Core Models
-- **SeniorDiscount**: Main discount entity with JSON payload and shadow columns
-- **AdminAuditLog**: Audit trail for admin actions
-- **Status Enum**: PENDING, PUBLISHED, TRASH
-
-### Key Features
-- **Duplicate Guard**: Prevents same business from submitting similar discounts on the same day
-- **Shadow Columns**: Optimized fields for querying and indexing
-- **JSON Payload**: Flexible storage of all discount details
-- **Audit Trail**: Complete history of admin actions
-- **Performance Indexes**: Optimized queries for common filters
-
-### Duplicate Prevention System
-The system uses a sophisticated duplicate guard that prevents spam:
-- **businessNorm**: Normalized business name (lowercase, trimmed)
-- **amountNorm**: Normalized discount amount (lowercase, trimmed)
-- **createdDay**: UTC midnight of submission day
-- **Unique Constraint**: `@@unique([businessNorm, zip, amountNorm, createdDay])`
-
-This ensures that:
-- Same business can't submit identical discounts on the same day
-- Different businesses can submit similar discounts
-- New submissions are allowed after 24 hours
-- ZIP code variations allow local business chains
+## Key Features
 
 ### Automatic Expiration Cleanup
 The system automatically maintains a clean discount list:
@@ -126,197 +108,98 @@ The system automatically maintains a clean discount list:
 - **Admin Monitoring**: Dashboard shows cleanup status and expiring soon warnings
 - **Manual Override**: Admins can trigger manual cleanup if needed
 
-## 📧 Email System
+### Automatic Approval System
+Business submissions are automatically approved after 24 hours:
+- **Time-based Approval**: Pending discounts become PUBLISHED after 24 hours
+- **Real-time Processing**: Auto-approval runs on every public and admin API call
+- **Admin Control**: Admins can manually trigger auto-approval for ready discounts
+- **Transparency**: Dashboard shows auto-approval status and history
+- **No Manual Review Required**: Businesses can expect automatic approval within 24 hours
 
-### Nodemailer Configuration
-- **Gmail App Password**: Secure authentication
-- **HTML Templates**: Professional email notifications
-- **Multiple Types**: Submission, publication, rejection notifications
+### Individual Discount Pages
+Each discount now has its own dedicated page with a unique URL:
+- **Dynamic Routing**: `/discount/[id]` URLs for each discount
+- **Full Details**: Complete business and discount information display
+- **Professional Layout**: Clean, organized presentation of all discount data
+- **SEO Ready**: Individual pages for better search engine optimization
+- **User Experience**: Seniors can view complete details before making decisions
 
-### Email Templates
-- New submission alerts for moderators
-- Publication confirmations for business owners
-- Rejection notifications with reasons
-- Magic link authentication emails
+### "See Other Deals" Navigation
+Seamless navigation between individual discounts and the main board:
+- **Prominent CTA**: Clear "See Other Deals in [ZIP]" buttons
+- **Location Filtering**: Automatically filters results by ZIP code
+- **Multiple Entry Points**: Buttons in header, content area, and bottom CTA
+- **Contextual Links**: Users stay within their local area when browsing
+- **Improved Discovery**: Encourages exploration of multiple discounts
 
-## 🛡️ Security Features
+### Business Submission Process
+1. Business owner fills out discount form
+2. Submission is stored with PENDING status
+3. Admin receives email notification
+4. After 24 hours, discount is automatically approved
+5. Discount becomes visible to seniors searching the platform
 
-### reCAPTCHA v3
-- **Score-Based**: Adaptive bot detection
-- **Action Tracking**: Different scores for different actions
-- **Server Verification**: Secure token validation
+### Admin Dashboard Features
+- View pending, published, and trashed discounts
+- Manual approval/denial of specific discounts
+- Bulk operations for multiple discounts
+- Manual trigger for auto-approval system
+- Manual cleanup of expired discounts
+- Real-time status monitoring
 
-### Anti-Spam Measures
-- **Honeypot Fields**: Hidden form fields to catch bots
-- **Duplicate Guard**: Database-level prevention of spam submissions
-- **Rate Limiting**: Request throttling per IP
-- **Input Validation**: Comprehensive Zod schemas
-- **IP Tracking**: Monitor submission patterns
+## API Endpoints
 
-### Data Protection
-- **Input Sanitization**: Clean and normalize user input
-- **SQL Injection Prevention**: Prisma ORM protection
-- **XSS Prevention**: Sanitized HTML output
-- **CSRF Protection**: Clerk-built security
+### Public
+- `GET /api/discounts` - List published discounts
+- `POST /api/discounts` - Submit new discount
+- `GET /api/discounts/[id]` - Get individual discount details
 
-## 📊 Caching Strategy
+### Admin
+- `GET /api/admin/discounts` - List all discounts (with auto-approval)
+- `POST /api/admin/discounts/[id]/approve` - Approve specific discount
+- `POST /api/admin/discounts/[id]/deny` - Deny specific discount
+- `POST /api/admin/auto-approve` - Manually trigger auto-approval
+- `POST /api/admin/cleanup-expired` - Manually trigger cleanup
 
-### Cache Levels
-- **Public Discounts**: 60 seconds with stale-while-revalidate
-- **Admin Data**: 30 seconds for real-time updates
-- **Statistics**: 1 hour for performance data
-- **Categories**: 24 hours for static data
+## Business Rules
 
-### Cache Invalidation
-- **Tag-Based**: Granular cache control
-- **Automatic**: Invalidate on data changes
-- **Manual**: Admin-triggered cache refresh
-- **Stale Data**: Serve stale content while updating
+- **Duplicate Prevention**: One discount per business per day
+- **Automatic Approval**: 24-hour waiting period for all submissions
+- **Expiration Management**: Automatic cleanup of expired offers
+- **ZIP Code Variations**: Allow local business chains
+- **Content Validation**: Input sanitization and validation
 
-## 🔄 API Endpoints
+## Development
 
-### Public Endpoints
-```
-GET  /api/discounts          # List public discounts
-POST /api/discounts          # Submit new discount
-```
-
-### Admin Endpoints
-```
-GET    /api/admin/discounts                    # List all discounts
-POST   /api/admin/discounts/[id]/publish      # Publish discount
-POST   /api/admin/discounts/[id]/trash        # Move to trash
-```
-
-### Features
-- **Pagination**: Configurable page sizes
-- **Filtering**: ZIP, category, age, status
-- **Sorting**: Sponsored first, then by date
-- **Rate Limiting**: Per-endpoint throttling
-- **Duplicate Detection**: Automatic spam prevention
-
-## 🧪 Testing & Development
-
-### Development Tools
-- **Prisma Studio**: Database visualization
-- **TypeScript**: Full type safety
-- **ESLint**: Code quality enforcement
-- **Hot Reload**: Fast development iteration
-
-### Database Operations
+### Prisma Commands
 ```bash
-# Generate types
-pnpm db:generate
-
-# Reset database
-pnpm db:push --force-reset
-
-# Seed data
-pnpm db:seed
-
-# View data
-pnpm db:studio
+npx prisma generate    # Generate Prisma client
+npx prisma db push     # Push schema changes to database
+npx prisma studio      # Open database browser
 ```
 
-## 🚀 Deployment
+### Code Quality
+- TypeScript for type safety
+- ESLint for code linting
+- Prettier for code formatting
+- Tailwind CSS for styling
 
-### Vercel (Recommended)
-1. Connect your GitHub repository
-2. Set environment variables
-3. Deploy automatically on push
+## Deployment
 
-### Environment Variables
-Ensure all required environment variables are set:
-- Database connection
-- Clerk keys
-- Email credentials
-- reCAPTCHA keys
-- App URLs and secrets
+The app is configured for Vercel deployment with:
+- Automatic database migrations
+- Environment variable management
+- Edge function optimization
+- Static asset optimization
 
-### Database Migration
-```bash
-# Production migration
-pnpm db:migrate --deploy
+## Contributing
 
-# Generate client
-pnpm db:generate
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-## 📈 Monitoring & Maintenance
+## License
 
-### Health Checks
-- Database connectivity
-- Email service status
-- reCAPTCHA verification
-- Authentication service
-
-### Logging
-- Structured error logging
-- Audit trail maintenance
-- Performance metrics
-- Security event tracking
-
-### Backup Strategy
-- Automated database backups
-- Point-in-time recovery
-- Data retention policies
-- Disaster recovery procedures
-
-## 🔧 Configuration
-
-### Rate Limiting
-- **Public API**: 100 requests per minute
-- **Submission**: 10 submissions per hour per IP
-- **Admin API**: 1000 requests per minute per user
-
-### Email Limits
-- **Notifications**: Unlimited for admins
-- **Magic Links**: 5 per hour per email
-- **Templates**: HTML with inline CSS
-
-### Cache Settings
-- **TTL**: Configurable per endpoint
-- **Max Size**: Memory-based limits
-- **Eviction**: LRU strategy
-
-### Duplicate Guard Settings
-- **Time Window**: 24 hours (UTC midnight to midnight)
-- **Normalization**: Business name and amount are lowercased and trimmed
-- **Scope**: Per ZIP code to allow local business chains
-- **Flexibility**: Different amounts or business names are allowed
-
-## 🤝 Contributing
-
-### Code Standards
-- **TypeScript**: Strict mode enabled
-- **ESLint**: Airbnb configuration
-- **Prettier**: Consistent formatting
-- **Conventional Commits**: Standard commit messages
-
-### Development Workflow
-1. Create feature branch
-2. Implement with tests
-3. Update documentation
-4. Submit pull request
-5. Code review process
-6. Merge to main
-
-## 📚 Additional Resources
-
-- [Next.js 14 Documentation](https://nextjs.org/docs)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [Clerk Documentation](https://clerk.com/docs)
-- [Zod Documentation](https://zod.dev)
-- [Nodemailer Documentation](https://nodemailer.com)
-
-## 🆘 Support
-
-For technical support or questions:
-- Check the documentation
-- Review existing issues
-- Create a new issue with details
-- Contact the development team
-
----
-
-**Built with ❤️ for helping seniors save money**
+This project is proprietary software. All rights reserved.
